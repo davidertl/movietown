@@ -1,9 +1,3 @@
- (cd "$(git rev-parse --show-toplevel)" && git apply --3way <<'EOF' 
-diff --git a/README.md b/README.md
-index e69de29bb2d1d6434b8b29ae775ad8c2e48c5391..e05e1a982ae33f22913620253b5fdc8dca86dfb3 100644
---- a/README.md
-+++ b/README.md
-@@ -0,0 +1,39 @@
 +# movietown
 +
 +Dieses Repository enthält die Compose-Dateien für meinen Media-Stack. Grundlage ist [mediastack.guide](https://mediastack.guide) und bildet sowohl die Cloud- als auch die lokale Heim-Umgebung ab.
