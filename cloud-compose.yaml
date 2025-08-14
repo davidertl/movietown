@@ -1,0 +1,178 @@
+## Cloud deployment ##
+networks:
+  external:
+    name: external
+    driver: bridge
+    ipam:
+      driver: default
+      config:
+        - subnet: "${CLOUD_EXTERNAL_SUBNET:?Add to your env file}"
+          gateway: "${CLOUD_EXTERNAL_GATEWAY:?Add to your env file}"
+  authentik:
+    name: authentik
+    driver: bridge
+
+services:
+###########################################################################
+# AUTHENTIK (Upstream-Variante)
+###########################################################################
+  postgresql:
+    image: docker.io/library/postgres:latest
+    container_name: postgresql-authentik
+    restart: unless-stopped
+    networks:
+      - authentik
+    ports:
+      - ${POSTGRESQL_PORT:-5432}:5432
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -d $${POSTGRES_DB} -U $${POSTGRES_USER}"]
+      start_period: 20s
+      interval: 30s
+      retries: 5
+      timeout: 5s
+    labels:
+      - "tsdproxy.enable=false"
+    volumes:
+      - ${FOLDER_FOR_DATA:?err}/postgresql:/var/lib/postgresql/data
+    environment:
+      - TZ=${TIMEZONE:?err}
+      - POSTGRES_DB=${AUTHENTIK_DATABASE:?err}
+      - POSTGRES_USER=${POSTGRESQL_USERNAME:?err}
+      - POSTGRES_PASSWORD=${POSTGRESQL_PASSWORD:?err}
+
+  valkey:
+    image: valkey/valkey:alpine
+    container_name: valkey
+    command: --save 60 1 --loglevel warning
+    restart: unless-stopped
+    networks:
+      - authentik
+    ports:
+      - ${VALKEY_PORT:-6379}:6379
+    healthcheck:
+      test: ["CMD-SHELL", "valkey-cli ping | grep PONG"]
+      start_period: 20s
+      interval: 30s
+      retries: 5
+      timeout: 3s
+    labels:
+      - "tsdproxy.enable=false"
+    volumes:
+      - ${FOLDER_FOR_DATA:?err}/valkey:/data
+
+  authentik:
+    image: ghcr.io/goauthentik/server:${AUTHENTIK_VERSION:-latest}
+    container_name: authentik
+    restart: unless-stopped
+    user: ${PUID:?err}:${PGID:?err}
+    networks:
+      - authentik
+      - external
+    command: server
+    environment:
+      - TZ=${TIMEZONE:?err}
+      - AUTHENTIK_LOG_LEVEL=info
+      - AUTHENTIK_SECRET_KEY=${AUTHENTIK_SECRET_KEY:?err}
+      - AUTHENTIK_REDIS__HOST=valkey
+      - AUTHENTIK_POSTGRESQL__HOST=postgresql
+      - AUTHENTIK_POSTGRESQL__NAME=${AUTHENTIK_DATABASE:-authentik}
+      - AUTHENTIK_POSTGRESQL__USER=${POSTGRESQL_USERNAME:-authentik}
+      - AUTHENTIK_POSTGRESQL__PASSWORD=${POSTGRESQL_PASSWORD:?Postgres password is required}
+      - AUTHENTIK_ERROR_REPORTING__ENABLED=${AUTHENTIK_ERROR_REPORTING__ENABLED:-false}
+    volumes:
+      - ${FOLDER_FOR_DATA:?err}/authentik/media:/media
+      - ${FOLDER_FOR_DATA:?err}/authentik/templates:/templates
+    ports:
+      - ${WEBUI_PORT_AUTHENTIK:-9000}:9000
+      - ${COMPOSE_PORT_HTTPS:-9443}:9443
+    labels:
+      - "tsdproxy.enable=true"
+      - "tsdproxy.name=authentik"
+    depends_on:
+      postgresql:
+        condition: service_healthy
+      valkey:
+        condition: service_healthy
+
+  authentik-worker:
+    image: ghcr.io/goauthentik/server:${AUTHENTIK_VERSION:?err}
+    container_name: authentik-worker
+    restart: unless-stopped
+    user: ${PUID:?err}:${PGID:?err}
+    networks:
+      - authentik
+      - external
+    command: worker
+    environment:
+      - TZ=${TIMEZONE:?err}
+      - AUTHENTIK_SECRET_KEY=${AUTHENTIK_SECRET_KEY:?err}
+      - AUTHENTIK_REDIS__HOST=valkey
+      - AUTHENTIK_POSTGRESQL__HOST=postgresql
+      - AUTHENTIK_POSTGRESQL__NAME=${AUTHENTIK_DATABASE:?err}
+      - AUTHENTIK_POSTGRESQL__USER=${POSTGRESQL_USERNAME:?err}
+      - AUTHENTIK_POSTGRESQL__PASSWORD=${POSTGRESQL_PASSWORD:?err}
+      - AUTHENTIK_ERROR_REPORTING__ENABLED=${AUTHENTIK_ERROR_REPORTING__ENABLED:-false}
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - ${FOLDER_FOR_DATA:?err}/certs:/certs
+      - ${FOLDER_FOR_DATA:?err}/authentik/media:/media
+      - ${FOLDER_FOR_DATA:?err}/authentik/templates:/templates
+    depends_on:
+      postgresql:
+        condition: service_healthy
+        restart: true
+      valkey:
+        condition: service_healthy
+        restart: true
+    healthcheck:
+      test: ["CMD-SHELL", "ps -ef | grep worker | grep -v grep"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 30s
+
+
+###########################################################################
+# WATCHTOWER (Container Auto-Update)
+###########################################################################
+  watchtower:
+    image: containrrr/watchtower:latest
+    container_name: watchtower
+    networks:
+      - external
+    user: ${PUID:?err}:${PGID:?err}
+    labels:
+      - "tsdproxy.enable=true"
+      - "tsdproxy.name=watchtower"
+    environment:
+      - TZ=${TIMEZONE:?err}
+      - WATCHTOWER_CLEANUP=true
+      - WATCHTOWER_LABEL_ENABLE=true
+      - WATCHTOWER_POLL_INTERVAL=3600
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+
+
+      
+#############################################################################
+## TSD Proxy # https://almeidapaulopt.github.io
+#############################################################################
+#
+#  tsdproxy:
+#    image: almeidapaulopt/tsdproxy:1
+#    volumes:
+#      - /var/run/docker.sock:/var/run/docker.sock
+#      - datadir:/data
+#      - ${FOLDER_FOR_DATA:?err}/tsdproxy_hetzner:/config
+#    restart: unless-stopped
+#    networks:
+#      - external
+#    environment:
+#      - TS_AUTHKEY=${TAILSCALE_AUTH_KEY:?TAILSCALE_AUTH_KEY missing}
+#    ports:
+#      - "80:8080"
+
+
+#volumes:
+#  # TSD Proxy Data
+#  datadir:
