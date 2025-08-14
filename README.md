@@ -23,9 +23,8 @@ Repository for my media stack, based on [mediastack.guide](https://mediastack.gu
 ### :house: Home server "PMS"
 
 - Central *ARR services (Sonarr, Radarr, Readarr, SABnzbd, qBittorrent …)
-- Media storage on a Synology NAS
+- Media storage on a NAS (NFSv4 mount)
 - Connection to the Hetzner server via Tailscale
-- Only Jellyfin, Plex & Authentik are exposed publicly
 
 > **Configuration:** [`home-compose.yaml`](home-compose.yaml)
 
@@ -56,9 +55,34 @@ Goal: First deploy the cloud stack and set up Authentik, then configure Tailscal
 
 ### 0) Prerequisites
 
-- Docker and Docker Compose on both servers (Hetzner cloud and home server “PMS”)
-- DNS/firewall configured appropriately (at least the ports exposed in the compose files)
+- Docker and Docker Compose are installed on both servers 
+
+[https://docs.docker.com/engine/install/debian/] just in case: 
+```
+# Uninstall conflicting packages
+for pkg in docker.io docker-doc docker-compose podman-docker containerd runc; do sudo apt-get remove $pkg; done
+
+# Add Docker's official GPG key:
+sudo apt-get update
+sudo apt-get install ca-certificates curl
+sudo install -m 0755 -d /etc/apt/keyrings
+sudo curl -fsSL https://download.docker.com/linux/debian/gpg -o /etc/apt/keyrings/docker.asc
+sudo chmod a+r /etc/apt/keyrings/docker.asc
+
+# Add the repository to Apt sources:
+echo \
+  "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.asc] https://download.docker.com/linux/debian \
+  $(. /etc/os-release && echo "$VERSION_CODENAME") stable" | \
+  sudo tee /etc/apt/sources.list.d/docker.list > /dev/null
+sudo apt-get update
+
+# Install Docker
+sudo apt-get install docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
+```
+
+- Firewall configured appropriately (at least the ports exposed in the compose files)
 - A git checkout of this repo on both servers
+- Mount NAS Drive via NFS (best with fstab, so it automatically mounts on boot)
 
 ### 1) Prepare the cloud server (.env)
 
