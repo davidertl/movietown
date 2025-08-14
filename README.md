@@ -1,9 +1,8 @@
-diff --git a/README.md b/README.md
 # movietown
 
 <p align="center">
-	<img src="https://img.shields.io/badge/docker-compose-blue?logo=docker" alt="Docker Compose">
-	<img src="https://img.shields.io/badge/mediastack-guide-green" alt="MediaStack Guide">
+    <img src="https://img.shields.io/badge/docker-compose-blue?logo=docker" alt="Docker Compose">
+    <img src="https://img.shields.io/badge/mediastack-guide-green" alt="MediaStack Guide">
 </p>
 
 Repository for my media stack, based on [mediastack.guide](https://mediastack.guide). It contains Docker Compose files for both cloud and home environments.
@@ -19,16 +18,16 @@ Repository for my media stack, based on [mediastack.guide](https://mediastack.gu
 - **Automatic updates:** Watchtower
 - **Networking:** Connection to the home network via Tailscale
 
-> **Konfiguration:** [`cloud-compose.yaml`](cloud-compose.yaml)
+> **Configuration:** [`cloud-compose.yaml`](cloud-compose.yaml)
 
 ### :house: Home server "PMS"
 
-- Central *ARR services (Sonarr, Radarr, Readarr, SABnzbd, qBittorrent ...)
+- Central *ARR services (Sonarr, Radarr, Readarr, SABnzbd, qBittorrent …)
 - Media storage on a Synology NAS
 - Connection to the Hetzner server via Tailscale
 - Only Jellyfin, Plex & Authentik are exposed publicly
 
-> **Konfiguration:** [`home-compose.yaml`](home-compose.yaml)
+> **Configuration:** [`home-compose.yaml`](home-compose.yaml)
 
 ---
 
@@ -36,10 +35,10 @@ Repository for my media stack, based on [mediastack.guide](https://mediastack.gu
 
 1. Create a `.env` file with all required variables (see comments in the compose files)
 2. Start the environment:
-	 ```bash
-	 docker compose -f cloud-compose.yaml up -d
-	 docker compose -f home-compose.yaml up -d
-	 ```
+    ```bash
+    docker compose -f cloud-compose.yaml up -d
+    docker compose -f home-compose.yaml up -d
+    ```
 3. Connect both servers via Tailscale
 
 ---
@@ -88,9 +87,13 @@ VALKEY_PORT=6379
 WEBUI_PORT_AUTHENTIK=9000
 COMPOSE_PORT_HTTPS=9443
 
-# Optional: For running Tailscale inside a container (tsdproxy)
-# If you choose this approach, set the auth key here
-# TAILSCALE_AUTH_KEY=tskey-xxxxxxxxxxxxxxxx
+# Database ports (cloud)
+POSTGRESQL_PORT=5432
+VALKEY_PORT=6379
+
+# Tailscale in container (tsdproxy)
+# cloud-compose enables tsdproxy by default; this key is REQUIRED unless you remove/disable the service
+TAILSCALE_AUTH_KEY=tskey-xxxxxxxxxxxxxxxx
 ```
 
 ### 2) Deploy the cloud stack (Authentik)
@@ -119,8 +122,8 @@ docker compose -f cloud-compose.yaml logs -f authentik
 1. Sign into Tailscale with your own account.
 2. In the Tailscale admin create a “Reusable Auth Key”.
 3. Two options to use the auth key:
-	- Host-based: Install Tailscale on the home server and join using the auth key.
-	- Container-based: Use `tsdproxy`. Set `TAILSCALE_AUTH_KEY` in `.env` and enable the `tsdproxy` service (used this way in the cloud so we can also access via PublicIP:Port).
+  - Host-based: Install Tailscale on the host and join using the auth key. If you choose this for the cloud server, remove or disable the `tsdproxy` service in `cloud-compose.yaml`.
+  - Container-based (default in cloud-compose): Use `tsdproxy`. Set `TAILSCALE_AUTH_KEY` in `.env`. This allows access via PublicIP:Port routed through Tailscale.
 
 ### 5) Prepare the home server (.env)
 
@@ -134,6 +137,12 @@ PGID=1000
 FOLDER_FOR_DATA=/srv/movietown/data
 FOLDER_FOR_MEDIA=/mnt/media
 
+# Docker networks (required by home-compose networks)
+DOCKER_SUBNET=172.23.0.0/16
+DOCKER_GATEWAY=172.23.0.1
+INTERNAL_SUBNET=172.24.0.0/16
+INTERNAL_GATEWAY=172.24.0.1
+
 # Services (home-compose)
 POSTGRESQL_PORT=5432
 VALKEY_PORT=6379
@@ -141,42 +150,106 @@ GLUETUN_CONTROL_PORT=8000
 WEBUI_PORT_QBITTORRENT=8200
 TP_THEME=organizr-dark
 
+# Authentik DB settings (used by authentik-worker/postgres)
+AUTHENTIK_VERSION=latest
+AUTHENTIK_SECRET_KEY=change-me-very-secret
+AUTHENTIK_DATABASE=authentik
+POSTGRESQL_USERNAME=authentik
+POSTGRESQL_PASSWORD=change-me-postgres
+
 # For Tailscale in a container (tsdproxy)
 TAILSCALE_AUTH_KEY=tskey-xxxxxxxxxxxxxxxx
+
+# Gluetun/VPN (required)
+UMASK=002
+VPN_SERVICE_PROVIDER=custom
+VPN_USERNAME=your_vpn_username
+VPN_PASSWORD=your_vpn_password
+LOCAL_SUBNET=192.168.0.0/16
+#DO NOT FORGET THE OPENVPN config file :-)
 ```
 
 ### 6) Deploy both stacks with Tailscale
 
-
-- Cloud
-- Add Tailscale Auth Key to Cloud `.env` file:
-
-
-
-```bash
-docker compose -f cloud-compose.yaml up -d
-# to verify
-docker compose -f cloud-compose.yaml ps
-```
+- Cloud:
+    ```bash
+    docker compose -f cloud-compose.yaml up -d
+    # to verify
+    docker compose -f cloud-compose.yaml ps
+    ```
 
 - Home:
-
-```bash
-docker compose -f home-compose.yaml up -d
-# to verify
-docker compose -f home-compose.yaml ps
-```
-
-Check:
-
-```bash
-docker compose -f home-compose.yaml ps
-```
+    ```bash
+    docker compose -f home-compose.yaml up -d
+    # to verify
+    docker compose -f home-compose.yaml ps
+    ```
 
 ### 7) Verify & next steps
 
 - Ensure services are reachable (over Tailscale IP/name and the exposed ports).
 - Watchtower updates images automatically (already label-configured in the cloud).
-- Integrate services with Authentik (SSO) as needed, set up DNS/reverse proxy, and plan backups (still a fair bit of work).
+- Integrate services with Authentik (SSO) as needed, set up DNS/reverse proxy, and plan backups.
 
+---
 
+## :gear: Setup of the *ARR apps
+
+The *ARR services (Sonarr, Radarr, Readarr, Lidarr, Prowlarr, Bazarr) are available after starting the home compose stack on the ports defined in `home-compose.yaml`.
+Detailed setup guidance is available in the [*ARR section on mediastack.guide](https://mediastack.guide) and the respective project docs:
+
+- [Sonarr](https://sonarr.tv/#download)
+- [Radarr](https://radarr.video/#download)
+- [Readarr](https://readarr.com)
+- [Lidarr](https://lidarr.audio)
+- [Prowlarr](https://wiki.servarr.com/prowlarr)
+- [Bazarr](http://www.bazarr.media/)
+
+Recommended setup order:
+
+1. Configure **Prowlarr** and connect your indexers (Usenet, torrents).
+2. Link **Sonarr / Radarr / Readarr / Lidarr** to Prowlarr (sync indexers automatically).
+3. Add download clients (qBittorrent, SABnzbd) in the *ARR apps.
+4. Configure quality profiles, release profiles, and media paths.
+5. Optional: Enable subtitle automation with Bazarr.
+
+Notes:
+
+- The *ARR apps are by default **not** publicly exposed in the home stack. Access is local or via Tailscale/VPN.
+- Authentik (SSO) integration can be added after basic setup.
+
+---
+
+## :lock: Tailscale ACLs (tag/group-based)
+
+With Tailscale ACLs you can precisely control which devices and services in your media stack are reachable. This greatly improves security, especially if you have devices in the same tailnet that shouldn’t access the *ARR services.
+
+Suggested steps:
+
+1. In the Tailscale admin, open the **ACL configuration**.
+2. Define tags for servers/services (e.g., `tag:home-arr`).
+3. Assign these tags to groups (e.g., `group:arr-admins`).
+4. Create rules such as:
+
+```json
+{
+  "ACLs": [
+    {
+      "Action": "accept",
+      "Users": ["group:arr-admins"],
+      "Ports": ["tag:home-arr:7878", "tag:home-arr:8989", "tag:home-arr:9696"]
+    }
+  ],
+  "TagOwners": {
+    "tag:home-arr": ["group:arr-admins"]
+  },
+  "Groups": {
+    "group:arr-admins": ["device1", "device2"]
+  }
+}
+```
+
+Benefits:
+- Access only for defined groups/tags
+- Additional protection alongside Authentik and any reverse proxy
+- Simple management across multiple sites/networks

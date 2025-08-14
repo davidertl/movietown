@@ -119,11 +119,9 @@ services:
       - ${FOLDER_FOR_DATA:?err}/authentik/templates:/templates
     depends_on:
       postgresql:
-        condition: service_healthy
-        restart: true
+  condition: service_healthy
       valkey:
-        condition: service_healthy
-        restart: true
+  condition: service_healthy
     healthcheck:
       test: ["CMD-SHELL", "ps -ef | grep worker | grep -v grep"]
       interval: 30s
