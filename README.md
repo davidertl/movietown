@@ -6,77 +6,77 @@ diff --git a/README.md b/README.md
 	<img src="https://img.shields.io/badge/mediastack-guide-green" alt="MediaStack Guide">
 </p>
 
-Repository für meinen Media-Stack, basierend auf [mediastack.guide](https://mediastack.guide). Enthält Docker Compose-Dateien für Cloud- und Heim-Umgebung.
+Repository for my media stack, based on [mediastack.guide](https://mediastack.guide). It contains Docker Compose files for both cloud and home environments.
 
 ---
 
-## :building_construction: Architektur
+## :building_construction: Architecture
 
 ### :cloud: Cloud @ Hetzner
 
-- **Auth-Stack:** Authentik inkl. PostgreSQL & Valkey
-- **Medien:** Jellyfin & Plex (über Ports erreichbar)
-- **Automatisches Update:** Watchtower
-- **Netzwerk:** Verbindung zum Heimnetz via Tailscale
+- **Auth stack:** Authentik incl. PostgreSQL & Valkey
+- **Media:** Jellyfin & Plex (exposed via ports)
+- **Automatic updates:** Watchtower
+- **Networking:** Connection to the home network via Tailscale
 
 > **Konfiguration:** [`cloud-compose.yaml`](cloud-compose.yaml)
 
-### :house: Heimserver "PMS"
+### :house: Home server "PMS"
 
-- Zentrale *ARR-Dienste (Sonarr, Radarr, Readarr, SABnzbd, qBittorrent ...)
-- Medienablage auf Synology NAS
-- Verbindung zum Hetzner-Server via Tailscale
-- Nur Jellyfin, Plex & Authentik von außen erreichbar
+- Central *ARR services (Sonarr, Radarr, Readarr, SABnzbd, qBittorrent ...)
+- Media storage on a Synology NAS
+- Connection to the Hetzner server via Tailscale
+- Only Jellyfin, Plex & Authentik are exposed publicly
 
 > **Konfiguration:** [`home-compose.yaml`](home-compose.yaml)
 
 ---
 
-## :rocket: Nutzung
+## :rocket: Usage
 
-1. `.env` Datei mit allen Variablen anlegen (siehe Kommentare in den Compose-Dateien)
-2. Umgebung starten:
+1. Create a `.env` file with all required variables (see comments in the compose files)
+2. Start the environment:
 	 ```bash
 	 docker compose -f cloud-compose.yaml up -d
 	 docker compose -f home-compose.yaml up -d
 	 ```
-3. Beide Server via Tailscale verbinden
+3. Connect both servers via Tailscale
 
 ---
 
-## :information_source: Hinweise
+## :information_source: Notes
 
-- Dieses Repository enthält **nur** Compose-Dateien; Secrets & Domain-Konfigurationen werden extern verwaltet.
-- Für Fragen oder weitere Planung siehe [mediastack.guide](https://mediastack.guide).
+- This repository contains **only** compose files; secrets and domain configurations are managed externally.
+- For questions or further planning, see [mediastack.guide](https://mediastack.guide).
 
 ---
 
-## 🧭 Schritt-für-Schritt Installation
+## 🧭 Step-by-step installation
 
-Ziel: Zuerst Cloud-Stack deployen und Authentik einrichten, anschließend Tailscale konfigurieren. Mit dem Tailscale Auth-Key beide Stacks (Cloud und Home) deployen.
+Goal: First deploy the cloud stack and set up Authentik, then configure Tailscale. Use the Tailscale auth key to deploy both stacks (cloud and home).
 
-### 0) Voraussetzungen
+### 0) Prerequisites
 
-- Docker und Docker Compose auf beiden Servern (Cloud bei Hetzner und Heimserver „PMS“)
-- DNS/Firewall passend konfiguriert (mind. die in den Compose-Dateien exponierten Ports)
-- Ein Git-Checkout dieses Repos auf beiden Servern
+- Docker and Docker Compose on both servers (Hetzner cloud and home server “PMS”)
+- DNS/firewall configured appropriately (at least the ports exposed in the compose files)
+- A git checkout of this repo on both servers
 
-### 1) Cloud-Server vorbereiten (.env)
+### 1) Prepare the cloud server (.env)
 
-Lege auf dem Cloud-Server eine `.env` im Repo-Verzeichnis an. Beispiel:
+Create a `.env` file in the repo directory on the cloud server. Example:
 
 ```dotenv
-# Allgemein
+# General
 TIMEZONE=Europe/Berlin
 PUID=1000
 PGID=1000
 FOLDER_FOR_DATA=/srv/movietown/data
 
-# Netzwerk (cloud-compose)
+# Network (cloud-compose)
 CLOUD_EXTERNAL_SUBNET=10.10.0.0/24
 CLOUD_EXTERNAL_GATEWAY=10.10.0.1
 
-# Authentik / Datenbanken (cloud)
+# Authentik / databases (cloud)
 AUTHENTIK_VERSION=latest
 AUTHENTIK_SECRET_KEY=change-me-very-secret
 AUTHENTIK_DATABASE=authentik
@@ -88,75 +88,74 @@ VALKEY_PORT=6379
 WEBUI_PORT_AUTHENTIK=9000
 COMPOSE_PORT_HTTPS=9443
 
-# Optional: Für Tailscale im Container (tsdproxy) 
-# Bleibt vorerst auskommentiert
+# Optional: For running Tailscale inside a container (tsdproxy)
+# If you choose this approach, set the auth key here
 # TAILSCALE_AUTH_KEY=tskey-xxxxxxxxxxxxxxxx
 ```
 
-
-### 2) Cloud-Stack deployen (Authentik)
+### 2) Deploy the cloud stack (Authentik)
 
 ```bash
 docker compose -f cloud-compose.yaml up -d
 ```
 
-Warte, bis `postgresql` und `valkey` healthy sind und `authentik`/`authentik-worker` laufen.
+Wait until `postgresql` and `valkey` are healthy and both `authentik`/`authentik-worker` are running.
 
-Optional prüfen:
+Optionally check:
 
 ```bash
 docker compose -f cloud-compose.yaml ps
 docker compose -f cloud-compose.yaml logs -f authentik
 ```
 
-### 3) Authentik einrichten
+### 3) Set up Authentik
 
-- Öffne `https://<CLOUD-HOST>:9443` (oder `http://<CLOUD-HOST>:9000`), folge dem Setup-Wizard
-- Admin-User anlegen, Basis-URL und E-Mail-Konfiguration setzen (optional)
-- Spätere Integration mit Diensten (Jellyfin, Plex, *ARR) ist möglich, aber hier optional
+- Open `https://<CLOUD-HOST>:9443` (or `http://<CLOUD-HOST>:9000`) and follow the setup wizard
+- Create an admin user; set base URL and email configuration (optional)
+- Integration with services (Jellyfin, Plex, *ARR) is possible later but optional here
 
-### 4) Tailscale einrichten und Auth-Key erstellen
+### 4) Set up Tailscale and create an auth key
 
-1. Bei Tailscale mit eigenem OAuth anmelden.
-2. Im Tailscale Admin einen „Reusable Auth Key“ erzeugen
-3. Zwei Optionen zur Nutzung des Auth Keys:
-	- Host-basiert : Tailscale auf Heimserver installieren und mit dem Auth Key joinen
-	- Container-basiert: `tsdproxy` nutzen. Dafür in `.env` `TAILSCALE_AUTH_KEY` setzen und den `tsdproxy`-Service aktivieren (so in der Cloud genutzt, da wir dort auch über die PublicIP:Port zugreifen wollen
+1. Sign into Tailscale with your own account.
+2. In the Tailscale admin create a “Reusable Auth Key”.
+3. Two options to use the auth key:
+	- Host-based: Install Tailscale on the home server and join using the auth key.
+	- Container-based: Use `tsdproxy`. Set `TAILSCALE_AUTH_KEY` in `.env` and enable the `tsdproxy` service (used this way in the cloud so we can also access via PublicIP:Port).
 
-### 5) Heimserver vorbereiten (.env)
+### 5) Prepare the home server (.env)
 
-Befülle die .env Datei auf dem Heimserver:
-
-Beispiel:
+Fill the `.env` file on the home server. Example:
 
 ```dotenv
-# Allgemein
+# General
 TIMEZONE=Europe/Berlin
 PUID=1000
 PGID=1000
 FOLDER_FOR_DATA=/srv/movietown/data
 FOLDER_FOR_MEDIA=/mnt/media
 
-# Dienste (home-compose)
+# Services (home-compose)
 POSTGRESQL_PORT=5432
 VALKEY_PORT=6379
 GLUETUN_CONTROL_PORT=8000
 WEBUI_PORT_QBITTORRENT=8200
 TP_THEME=organizr-dark
 
-# Für Tailscale im Container (tsdproxy)
+# For Tailscale in a container (tsdproxy)
 TAILSCALE_AUTH_KEY=tskey-xxxxxxxxxxxxxxxx
 ```
 
+### 6) Deploy both stacks with Tailscale
 
-### 6) Beide Stacks mit Tailscale deployen
 
-- Cloud .env 
+- Cloud
+- Add Tailscale Auth Key to Cloud `.env` file:
 
-ssh root@cloudserver
+
+
 ```bash
 docker compose -f cloud-compose.yaml up -d
-#zum überprüfen
+# to verify
 docker compose -f cloud-compose.yaml ps
 ```
 
@@ -164,20 +163,20 @@ docker compose -f cloud-compose.yaml ps
 
 ```bash
 docker compose -f home-compose.yaml up -d
-#zum überprüfen
+# to verify
 docker compose -f home-compose.yaml ps
 ```
 
-Prüfen:
+Check:
 
 ```bash
 docker compose -f home-compose.yaml ps
 ```
 
-### 7) Verifizieren & nächste Schritte
+### 7) Verify & next steps
 
-- Prüfe, dass Dienste reachable sind (über Tailscale-IP/Name und die freigegebenen Ports)
-- Watchtower aktualisiert Images automatisch (Cloud bereits label-basiert konfiguriert)
-- Dienste nach Bedarf an Authentik anbinden (SSO), DNS/Reverse Proxy einrichten, Backups planen (leider noch ein großer Haufen Arbeit)
+- Ensure services are reachable (over Tailscale IP/name and the exposed ports).
+- Watchtower updates images automatically (already label-configured in the cloud).
+- Integrate services with Authentik (SSO) as needed, set up DNS/reverse proxy, and plan backups (still a fair bit of work).
 
 
