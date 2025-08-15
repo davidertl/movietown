@@ -8,6 +8,8 @@
 Repository for my media stack, based on [mediastack.guide](https://mediastack.guide). It contains Docker Compose files for both cloud and home environments.
 
 ---
+## :notebook: Summary
+
 
 ## :building_construction: Architecture
 
@@ -84,7 +86,7 @@ sudo apt-get install docker-ce docker-ce-cli containerd.io docker-buildx-plugin 
 
 - Firewall configured appropriately (at least the ports exposed in the compose files)
 - A git checkout of this repo on both servers
-- Mount NAS Drive via NFS (best with fstab, so it automatically mounts on boot)
+- Mount NAS Drive via NFS on the Home-Server (best with fstab, so it automatically mounts on boot)
 
 ### 1) Prepare the cloud server (.env)
 
