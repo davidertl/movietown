@@ -57,7 +57,7 @@ Goal: First deploy the cloud stack and set up Authentik, then configure Tailscal
 
 - Docker and Docker Compose are installed on both servers 
 
-[Just in Case heres the snipplet](https://docs.docker.com/engine/install/debian/) (for reference)
+[Documentation for Docker @ docs.docker.com](https://docs.docker.com/engine/install/debian/) (for reference)
 
 Skip this, if docker is installed!
 ```
