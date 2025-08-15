@@ -1,15 +1,74 @@
 # movietown
 
 <p align="center">
-    <img src="https://img.shields.io/badge/docker-compose-blue?logo=docker" alt="Docker Compose">
-    <img src="https://img.shields.io/badge/mediastack-guide-green" alt="MediaStack Guide">
+  <img src="https://img.shields.io/badge/docker-compose-blue?logo=docker" alt="Docker Compose">
+  <img src="https://img.shields.io/badge/variant-mediastack.guide-green" alt="MediaStack Guide Variant">
+  <br/>
+  <!-- Cloud -->
+  <img src="https://img.shields.io/badge/IdP-Authentik-5b8cfa" alt="Authentik">
+  <img src="https://img.shields.io/badge/DB-PostgreSQL-336791?logo=postgresql&logoColor=white" alt="PostgreSQL">
+  <img src="https://img.shields.io/badge/Cache-Valkey-d82c20" alt="Valkey">
+  <img src="https://img.shields.io/badge/Updates-Watchtower-2f77d0" alt="Watchtower">
+  <img src="https://img.shields.io/badge/Overlay-Tailscale-262626?logo=tailscale&logoColor=white" alt="Tailscale">
+  <img src="https://img.shields.io/badge/Tailscale-tsdproxy-262626" alt="tsdproxy">
+  <br/>
+  <!-- Home -->
+  <img src="https://img.shields.io/badge/VPN-Gluetun-3776AB" alt="Gluetun">
+  <img src="https://img.shields.io/badge/Automation-Sonarr-1f8acb" alt="Sonarr">
+  <img src="https://img.shields.io/badge/Automation-Radarr-f5c518" alt="Radarr">
+  <img src="https://img.shields.io/badge/Automation-Readarr-ff6f61" alt="Readarr">
+  <img src="https://img.shields.io/badge/Automation-Lidarr-0db7ed" alt="Lidarr">
+  <img src="https://img.shields.io/badge/Automation-Prowlarr-6a5acd" alt="Prowlarr">
+  <img src="https://img.shields.io/badge/Subtitles-Bazarr-ffcc00" alt="Bazarr">
+  <img src="https://img.shields.io/badge/BT-qBittorrent-2D7DB3" alt="qBittorrent">
+  <img src="https://img.shields.io/badge/NZB-SABnzbd-ffa000" alt="SABnzbd">
+  <img src="https://img.shields.io/badge/Media-Jellyfin-00a4dc?logo=jellyfin&logoColor=white" alt="Jellyfin">
+  <img src="https://img.shields.io/badge/Media-Plex-e5a00d?logo=plex&logoColor=white" alt="Plex">
 </p>
+
 
 Repository for my media stack, based on [mediastack.guide](https://mediastack.guide). It contains Docker Compose files for both cloud and home environments.
 
----
-## :notebook: Summary
+## BlaBlah in the beginning
+I wanted to deploy mediastack, but i've had privacy concerns. Cloudflared would have been my first choice, but sadly is straming against their TOS. So I've tried around and found tailscale. 
 
+---
+### Project summary
+- Two-site media stack connected via Tailscale to be able to host Storage and *ARR at home and hide your private IP Adress while also having a A record set to the cloud server for access where tailscale can not be installed (you could use tailscale funnel aswell).
+  - Cloud: Authentik (IdP/SSO) with PostgreSQL and Valkey, automatic updates via Watchtower, optional containerized Tailscale with tsdproxy.
+  - Home: Core *ARR apps (Sonarr, Radarr, Readarr, Lidarr, Prowlarr, Bazarr), qBittorrent and SABnzbd, traffic routed through Gluetun (VPN), Tailscale, Watchtower; media can be stored either directly on the home server or on a local NAS mounted via NFSv4
+- Private-by-default: *ARR Services are only reachable over Tailnet optionally: via tsdproxy dashboard where enabled), Plex and (/or) Jellyfin via public IP of the cloud host. 
+- Install guide: Deploy cloud stack and complete Authentik setup → configure Tailscale with Authentik-OAuth and create an auth key → deploy both stacks using the key → integrate SSO with services as needed.
+
+### Differences to mediastack.guide
+- Topology: Split into two stacks (cloud + home) bridged by Tailscale, whereas mediastack.guide is primarily single-host oriented.
+- SSO: Authentik is included by default, so you can create a login for your family (please check your local laws ;-) )
+- Exposure model: Prefers Tailscale/tsdproxy and Gluetun tunneling over a public reverse proxy, reducing open ports.
+- Security stance: Tailnet-first with ACLs for fine-grained access control.
+- Compose structure: Minimal, split compose files with focused scope vs. a larger, opinionated monolithic stack.
+
+## :building_construction: Architecture
+
+### :cloud: Cloud @ Hetzner
+
+- **Auth stack:** Authentik incl. PostgreSQL & Valkey
+- **Media:** Jellyfin & Plex (exposed via ports)
+- **Automatic updates:** Watchtower
+- **Networking:** Connection to the home network via Tailscale
+
+> **Configuration:** [`cloud-compose.yaml`](cloud-compose.yaml)
+
+### :house: Home server "PMS"
+
+- Central *ARR services (Sonarr, Radarr, Readarr, SABnzbd, qBittorrent …)
+- Media storage on a NAS (NFSv4 mount)
+- Connection to the Hetzner server via Tailscale
+
+> **Configuration:** [`home-compose.yaml`](home-compose.yaml)
+
+---
+
+## :rocket: Usage
 
 ## :building_construction: Architecture
 
