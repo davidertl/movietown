@@ -1,29 +1,67 @@
 # movietown
 
 <p align="center">
-  <img src="https://img.shields.io/badge/docker-compose-blue?logo=docker" alt="Docker Compose">
-  <img src="https://img.shields.io/badge/variant-mediastack.guide-green" alt="MediaStack Guide Variant">
+  <a href="https://docs.docker.com/compose/">
+    <img src="https://img.shields.io/badge/docker-compose-blue?logo=docker" alt="Docker Compose">
+  </a>
+  <a href="https://github.com/geekau/mediastack-guide">
+    <img src="https://img.shields.io/badge/variant-mediastack.guide-green" alt="MediaStack Guide Variant">
+  </a>
   <br/>
   <!-- Cloud -->
-  <img src="https://img.shields.io/badge/IdP-Authentik-5b8cfa" alt="Authentik">
-  <img src="https://img.shields.io/badge/DB-PostgreSQL-336791?logo=postgresql&logoColor=white" alt="PostgreSQL">
-  <img src="https://img.shields.io/badge/Cache-Valkey-d82c20" alt="Valkey">
-  <img src="https://img.shields.io/badge/Updates-Watchtower-2f77d0" alt="Watchtower">
-  <img src="https://img.shields.io/badge/Overlay-Tailscale-262626?logo=tailscale&logoColor=white" alt="Tailscale">
-  <img src="https://img.shields.io/badge/Tailscale-tsdproxy-262626" alt="tsdproxy">
+  <a href="https://github.com/goauthentik/authentik">
+    <img src="https://img.shields.io/badge/IdP-Authentik-5b8cfa" alt="Authentik">
+  </a>
+  <a href="https://github.com/postgres/postgres">
+    <img src="https://img.shields.io/badge/DB-PostgreSQL-336791?logo=postgresql&logoColor=white" alt="PostgreSQL">
+  </a>
+  <a href="https://github.com/valkey-io/valkey">
+    <img src="https://img.shields.io/badge/Cache-Valkey-d82c20" alt="Valkey">
+  </a>
+  <a href="https://github.com/containrrr/watchtower">
+    <img src="https://img.shields.io/badge/Updates-Watchtower-2f77d0" alt="Watchtower">
+  </a>
+  <a href="https://github.com/tailscale/tailscale">
+    <img src="https://img.shields.io/badge/Overlay-Tailscale-262626?logo=tailscale&logoColor=white" alt="Tailscale">
+  </a>
+  <a href="https://github.com/almeidapaulopt/tsdproxy">
+    <img src="https://img.shields.io/badge/Tailscale-tsdproxy-262626" alt="tsdproxy">
+  </a>
   <br/>
   <!-- Home -->
-  <img src="https://img.shields.io/badge/VPN-Gluetun-3776AB" alt="Gluetun">
-  <img src="https://img.shields.io/badge/Automation-Sonarr-1f8acb" alt="Sonarr">
-  <img src="https://img.shields.io/badge/Automation-Radarr-f5c518" alt="Radarr">
-  <img src="https://img.shields.io/badge/Automation-Readarr-ff6f61" alt="Readarr">
-  <img src="https://img.shields.io/badge/Automation-Lidarr-0db7ed" alt="Lidarr">
-  <img src="https://img.shields.io/badge/Automation-Prowlarr-6a5acd" alt="Prowlarr">
-  <img src="https://img.shields.io/badge/Subtitles-Bazarr-ffcc00" alt="Bazarr">
-  <img src="https://img.shields.io/badge/BT-qBittorrent-2D7DB3" alt="qBittorrent">
-  <img src="https://img.shields.io/badge/NZB-SABnzbd-ffa000" alt="SABnzbd">
-  <img src="https://img.shields.io/badge/Media-Jellyfin-00a4dc?logo=jellyfin&logoColor=white" alt="Jellyfin">
-  <img src="https://img.shields.io/badge/Media-Plex-e5a00d?logo=plex&logoColor=white" alt="Plex">
+  <a href="https://github.com/qdm12/gluetun">
+    <img src="https://img.shields.io/badge/VPN-Gluetun-3776AB" alt="Gluetun">
+  </a>
+  <a href="https://github.com/Sonarr/Sonarr">
+    <img src="https://img.shields.io/badge/Automation-Sonarr-1f8acb" alt="Sonarr">
+  </a>
+  <a href="https://github.com/Radarr/Radarr">
+    <img src="https://img.shields.io/badge/Automation-Radarr-f5c518" alt="Radarr">
+  </a>
+  <a href="https://github.com/Readarr/Readarr">
+    <img src="https://img.shields.io/badge/Automation-Readarr-ff6f61" alt="Readarr">
+  </a>
+  <a href="https://github.com/Lidarr/Lidarr">
+    <img src="https://img.shields.io/badge/Automation-Lidarr-0db7ed" alt="Lidarr">
+  </a>
+  <a href="https://github.com/Prowlarr/Prowlarr">
+    <img src="https://img.shields.io/badge/Automation-Prowlarr-6a5acd" alt="Prowlarr">
+  </a>
+  <a href="https://github.com/morpheus65535/bazarr">
+    <img src="https://img.shields.io/badge/Subtitles-Bazarr-ffcc00" alt="Bazarr">
+  </a>
+  <a href="https://github.com/qbittorrent/qBittorrent">
+    <img src="https://img.shields.io/badge/BT-qBittorrent-2D7DB3" alt="qBittorrent">
+  </a>
+  <a href="https://github.com/sabnzbd/sabnzbd">
+    <img src="https://img.shields.io/badge/NZB-SABnzbd-ffa000" alt="SABnzbd">
+  </a>
+  <a href="https://github.com/jellyfin/jellyfin">
+    <img src="https://img.shields.io/badge/Media-Jellyfin-00a4dc?logo=jellyfin&logoColor=white" alt="Jellyfin">
+  </a>
+  <a href="https://github.com/plexinc/pms-docker">
+    <img src="https://img.shields.io/badge/Media-Plex-e5a00d?logo=plex&logoColor=white" alt="Plex">
+  </a>
 </p>
 
 
