@@ -67,16 +67,16 @@
 
 Repository for my media stack, based on [mediastack.guide](https://mediastack.guide). It contains Docker Compose files for both cloud and home environments.
 
-## BlaBlah in the beginning
-I wanted to deploy mediastack, but i've had privacy concerns. Cloudflared would have been my first choice, but sadly is straming against their TOS. So I've tried around and found tailscale. 
+## Why this stack
+I wanted to deploy mediastack but had privacy concerns. Cloudflared would have been my first choice, but streaming violates their TOS. I ended up using Tailscale instead.
 
 ---
 ### Project summary
-- Two-site media stack connected via Tailscale to be able to host Storage and *ARR at home and hide your private IP Adress while also having a A record set to the cloud server for access where tailscale can not be installed (you could use tailscale funnel aswell).
-  - Cloud: Authentik (IdP/SSO) with PostgreSQL and Valkey, automatic updates via Watchtower, optional containerized Tailscale with tsdproxy.
-  - Home: Core *ARR apps (Sonarr, Radarr, Readarr, Lidarr, Prowlarr, Bazarr), qBittorrent and SABnzbd, traffic routed through Gluetun (VPN), Tailscale, Watchtower; media can be stored either directly on the home server or on a local NAS mounted via NFSv4
-- Private-by-default: *ARR Services are only reachable over Tailnet optionally: via tsdproxy dashboard where enabled), Plex and (/or) Jellyfin via public IP of the cloud host. 
-- Install guide: Deploy cloud stack and complete Authentik setup → configure Tailscale with Authentik-OAuth and create an auth key → deploy both stacks using the key → integrate SSO with services as needed.
+- Two-site media stack connected via Tailscale: storage and *ARR at home, public entry point in the cloud.
+  - Cloud: Authentik (IdP/SSO) with PostgreSQL and Valkey, Watchtower, optional containerized Tailscale (tsdproxy), and media servers (Jellyfin + Plex).
+  - Home: *ARR apps (Sonarr, Radarr, Readarr, Lidarr, Prowlarr, Bazarr), qBittorrent and SABnzbd, traffic routed through Gluetun (VPN); media can be stored either directly on the home server or on a local NAS mounted via NFSv4. Authentik runs only in the cloud; home runs an Authentik worker.
+- Private-by-default: *ARR services are reachable over the Tailnet; Jellyfin/Plex are exposed from the cloud host.
+- Install guide: Deploy the cloud stack and complete Authentik setup → configure Tailscale and create an auth key → deploy both stacks using that key → integrate SSO as needed.
 
 ### Differences to mediastack.guide
 - Topology: Split into two stacks (cloud + home) bridged by Tailscale, whereas mediastack.guide is primarily single-host oriented.
@@ -99,6 +99,7 @@ I wanted to deploy mediastack, but i've had privacy concerns. Cloudflared would 
 ### :house: Home server "PMS"
 
 - Central *ARR services (Sonarr, Radarr, Readarr, SABnzbd, qBittorrent …)
+- Authentik worker (connects to cloud PostgreSQL/Valkey)
 - Media storage on a NAS (NFSv4 mount)
 - Connection to the Hetzner server via Tailscale
 
@@ -106,32 +107,35 @@ I wanted to deploy mediastack, but i've had privacy concerns. Cloudflared would 
 
 ---
 
-## :rocket: Usage
+## :rocket: Quick Start
 
-## :building_construction: Architecture
+### Automated Installation (Recommended)
 
-### :cloud: Cloud @ Hetzner
+Use the automated setup script for easy deployment on fresh Debian/Ubuntu servers:
 
-- **Auth stack:** Authentik incl. PostgreSQL & Valkey
-- **Media:** Jellyfin & Plex (exposed via ports)
-- **Automatic updates:** Watchtower
-- **Networking:** Connection to the home network via Tailscale
+```bash
+# Clone this repository
+git clone https://github.com/yourusername/movietown.git
+cd movietown
 
-> **Configuration:** [`cloud-compose.yaml`](cloud-compose.yaml)
+# Make the setup script executable
+chmod +x setup.sh
 
-### :house: Home server "PMS"
+# Run the setup script
+./setup.sh
+```
 
-- Central *ARR services (Sonarr, Radarr, Readarr, SABnzbd, qBittorrent …)
-- Media storage on a NAS (NFSv4 mount)
-- Connection to the Hetzner server via Tailscale
+The script will:
+- Install Docker and Docker Compose if needed
+- Detect and guide you through cloud or home deployment
+- Create and configure your `.env` file with generated secrets
+- Set up all required directories
+- Validate your configuration
+- Optionally start the stack
 
-> **Configuration:** [`home-compose.yaml`](home-compose.yaml)
+If you prefer manual setup, see the detailed [step-by-step installation guide](#-step-by-step-installation) below.
 
----
-
-## :rocket: Usage
-
-1. Create a `.env` file with all required variables (see comments in the compose files)
+1. Create a `.env` file with all required variables (see example files)
 2. Start the environment:
     ```bash
     docker compose -f cloud-compose.yaml up -d
@@ -148,7 +152,9 @@ I wanted to deploy mediastack, but i've had privacy concerns. Cloudflared would 
 
 ---
 
-## 🧭 Step-by-step installation
+## 🧭 Step-by-step installation (Manual)
+
+> **💡 Tip:** For faster deployment, use the [automated setup script](#automated-installation-recommended) instead.
 
 Goal: First deploy the cloud stack and set up Authentik, then configure Tailscale. Use the Tailscale auth key to deploy both stacks (cloud and home).
 
@@ -195,6 +201,7 @@ TIMEZONE=Europe/Berlin
 PUID=1000
 PGID=1000
 FOLDER_FOR_DATA=/srv/movietown/data
+FOLDER_FOR_MEDIA=/srv/movietown/media
 
 # Network (cloud-compose)
 CLOUD_EXTERNAL_SUBNET=10.10.0.0/24
@@ -211,6 +218,11 @@ VALKEY_PORT=6379
 # Ports (cloud)
 WEBUI_PORT_AUTHENTIK=9000
 COMPOSE_PORT_HTTPS=9443
+WEBUI_PORT_JELLYFIN=8096
+WEBUI_PORT_PLEX=32400
+
+# Plex (optional)
+PLEX_CLAIM=
 
 # Database ports (cloud)
 POSTGRESQL_PORT=5432
@@ -269,15 +281,15 @@ INTERNAL_SUBNET=172.24.0.0/16
 INTERNAL_GATEWAY=172.24.0.1
 
 # Services (home-compose)
-POSTGRESQL_PORT=5432
-VALKEY_PORT=6379
 GLUETUN_CONTROL_PORT=8000
 WEBUI_PORT_QBITTORRENT=8200
 TP_THEME=organizr-dark
 
-# Authentik DB settings (used by authentik-worker/postgres)
+# Authentik worker settings (Authentik runs in the cloud)
 AUTHENTIK_VERSION=latest
 AUTHENTIK_SECRET_KEY=change-me-very-secret
+AUTHENTIK_REDIS__HOST=authentik-redis.your-tailnet.ts.net
+AUTHENTIK_POSTGRESQL__HOST=authentik-db.your-tailnet.ts.net
 AUTHENTIK_DATABASE=authentik
 POSTGRESQL_USERNAME=authentik
 POSTGRESQL_PASSWORD=change-me-postgres
@@ -313,7 +325,7 @@ LOCAL_SUBNET=192.168.0.0/16
 ### 7) Verify & next steps
 
 - Ensure services are reachable (over Tailscale IP/name and the exposed ports).
-- Watchtower updates images automatically (already label-configured in the cloud).
+- Watchtower updates images automatically (label filtering is disabled by default).
 - Integrate services with Authentik (SSO) as needed, set up DNS/reverse proxy, and plan backups.
 
 ---

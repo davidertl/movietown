@@ -9,7 +9,22 @@ A two-site media stack variant inspired by <a href="https://mediastack.guide" ta
 - Cloud: central identity (Authentik IdP/SSO), minimal footprint, private-by-default networking
 - Home: *ARR automation, download clients, VPN isolation, local/NAS media storage
 
-This repo provides Docker Compose files for both locations, example environment files, and a step-by-step flow.
+This repo provides Docker Compose files for both locations, example environment files, an automated setup script, and a step-by-step flow.
+
+---
+
+## Quick Start
+
+Use the automated `setup.sh` script for fast deployment:
+
+```bash
+git clone https://github.com/yourusername/movietown.git
+cd movietown
+chmod +x setup.sh
+./setup.sh
+```
+
+The script handles Docker installation, environment configuration, secret generation, and directory creation automatically.
 
 ---
 
@@ -17,8 +32,8 @@ This repo provides Docker Compose files for both locations, example environment 
 
 - Private-by-default: access over Tailscale; public ports kept minimal
 - Two stacks:
-  - Cloud: Authentik with PostgreSQL + Valkey, Watchtower, optional containerised Tailscale via tsdproxy
-  - Home: Sonarr/Radarr/Readarr/Lidarr/Prowlarr/Bazarr, qBittorrent/SABnzbd, Gluetun (VPN), Tailscale, Watchtower optional
+  - Cloud: Authentik with PostgreSQL + Valkey, Jellyfin + Plex, Watchtower, optional containerised Tailscale via tsdproxy
+  - Home: Sonarr/Radarr/Readarr/Lidarr/Prowlarr/Bazarr, qBittorrent/SABnzbd, Gluetun (VPN), Tailscale, Watchtower optional, Authentik worker only
 - Clear flow (“red line”):
   1) Deploy cloud stack
   2) Complete Authentik setup
@@ -38,23 +53,28 @@ Differences to mediastack.guide:
 - cloud-compose.yaml
   - Authentik + worker
   - PostgreSQL and Valkey
+  - Jellyfin + Plex
   - Watchtower
   - tsdproxy (containerised Tailscale) optional
 - home-compose.yaml
   - Gluetun (VPN)
-  - *ARR apps and download clients (placeholders in the compose)
+  - *ARR apps and download clients
+  - Authentik worker (cloud DB/Valkey)
   - Optional Watchtower
 
 Example env files:
 - cloud.example.env
 - home.example.env
 
-Note: Some services in the compose files are placeholders or WIP; adjust to your environment and hardware.
+Note: Adjust services and ports to your environment and hardware.
 
 ---
 
 ## Prerequisites
 
+**Recommended:** Use the automated `setup.sh` script (see Quick Start above).
+
+**Manual setup requires:**
 - Two hosts (e.g., Cloud VPS and Home server/NAS)
 - Docker Engine and Docker Compose plugin on both
 - Git checkout of this repo on both
@@ -94,7 +114,7 @@ docker compose -f cloud-compose.yaml up -d
   - FOLDER_FOR_DATA, FOLDER_FOR_MEDIA
   - Network subnets/gateways for docker networks
   - Service ports (*ARR, qBittorrent, etc.)
-  - AUTHENTIK_* (if needed), VPN_* for Gluetun
+  - AUTHENTIK_* and AUTHENTIK_*_HOST values for the worker, VPN_* for Gluetun
   - TAILSCALE_AUTH_KEY if using containerised Tailscale
 
 6) Deploy both stacks
@@ -121,6 +141,8 @@ docker compose -f home-compose.yaml up -d
 - Networking:
   - Ensure subnets/gateways do not overlap with your LAN/VPN ranges
   - Gluetun enforces a VPN egress for media automation as needed
+- Authentik worker (home):
+  - Set AUTHENTIK_REDIS__HOST and AUTHENTIK_POSTGRESQL__HOST to the cloud host or tsdproxy names
 - Tailscale/tsdproxy:
   - If you use host-based Tailscale on the cloud host, disable/remove tsdproxy from cloud-compose.yaml
   - If you keep tsdproxy, TAILSCALE_AUTH_KEY is required
@@ -132,12 +154,14 @@ docker compose -f home-compose.yaml up -d
 - Cloud
   - Authentik (IdP/SSO)
   - PostgreSQL, Valkey
+  - Jellyfin, Plex
   - Watchtower
   - tsdproxy (optional)
 - Home
   - Sonarr, Radarr, Readarr, Lidarr, Prowlarr, Bazarr
   - qBittorrent, SABnzbd
   - Gluetun (VPN)
+  - Authentik worker
   - Watchtower (optional)
 
 Adjust ports in your env files; by default *ARR services are not publicly exposed.

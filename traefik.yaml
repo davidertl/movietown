@@ -1,0 +1,40 @@
+api:
+  dashboard: true
+  debug: true
+
+entryPoints:
+  web:
+    address: ":80"
+    http:
+      redirections:
+        entrypoint:
+          regex: "^http://(.*)$"
+          replacement: "https://$1"
+          permanent: true
+  websecure:
+    address: ":443"
+    http:
+      tls:
+        certResolver: letsencrypt
+
+providers:
+  docker:
+    endpoint: "unix:///var/run/docker.sock"
+    exposedByDefault: false
+    network: external
+  file:
+    filename: /config.yaml
+    watch: true
+
+certificatesResolvers:
+  letsencrypt:
+    acme:
+      email: "${LETSENCRYPT_EMAIL}"
+      storage: /acme.json
+      httpChallenge:
+        entryPoint: web
+
+# Ping for healthcheck
+ping:
+  entryPoint: "web"
+  dashboard: false

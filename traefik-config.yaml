@@ -1,0 +1,17 @@
+# Dynamic configuration for Traefik
+# This file can be used for additional route configurations
+# Routes defined via Docker labels take precedence
+
+http:
+  routers: {}
+  services: {}
+  
+  # Example middleware (uncomment to use)
+  # middlewares:
+  #   basicAuth:
+  #     basicAuth:
+  #       users:
+  #         - "user:password"
+
+tcp: {}
+udp: {}

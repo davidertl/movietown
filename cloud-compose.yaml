@@ -14,6 +14,35 @@ networks:
 
 services:
 ###########################################################################
+# TRAEFIK (Reverse Proxy & SSL/TLS)
+###########################################################################
+  traefik:
+    image: traefik:latest
+    container_name: traefik
+    restart: unless-stopped
+    networks:
+      - external
+    ports:
+      - "80:80"
+      - "443:443"
+      - "${TRAEFIK_DASHBOARD_PORT:-8080}:8080"
+    environment:
+      - TZ=${TIMEZONE:?err}
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - ${FOLDER_FOR_DATA:?err}/traefik/traefik.yaml:/traefik.yaml:ro
+      - ${FOLDER_FOR_DATA:?err}/traefik/config.yaml:/config.yaml:ro
+      - ${FOLDER_FOR_DATA:?err}/traefik/acme.json:/acme.json
+    labels:
+      - "tsdproxy.enable=false"
+    healthcheck:
+      test: ["CMD", "traefik", "healthcheck", "--ping"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 30s
+
+###########################################################################
 # AUTHENTIK (Upstream-Variante)
 ###########################################################################
   postgresql:
@@ -33,7 +62,7 @@ services:
     labels:
       - "tsdproxy.enable=false"
     volumes:
-      - ${FOLDER_FOR_DATA:?err}/postgresql:/var/lib/postgresql/data
+      - ${FOLDER_FOR_DATA:?err}/postgresql:/var/lib/postgresql
     environment:
       - TZ=${TIMEZONE:?err}
       - POSTGRES_DB=${AUTHENTIK_DATABASE:?err}
@@ -88,6 +117,11 @@ services:
     labels:
       - "tsdproxy.enable=true"
       - "tsdproxy.name=authentik"
+      - "traefik.enable=true"
+      - "traefik.http.routers.authentik.rule=Host(`${AUTHENTIK_DOMAIN}`)"
+      - "traefik.http.routers.authentik.entrypoints=websecure"
+      - "traefik.http.routers.authentik.tls.certresolver=letsencrypt"
+      - "traefik.http.services.authentik.loadbalancer.server.port=9000"
     depends_on:
       postgresql:
         condition: service_healthy
@@ -119,15 +153,67 @@ services:
       - ${FOLDER_FOR_DATA:?err}/authentik/templates:/templates
     depends_on:
       postgresql:
-  condition: service_healthy
+        condition: service_healthy
       valkey:
-  condition: service_healthy
+        condition: service_healthy
     healthcheck:
       test: ["CMD-SHELL", "ps -ef | grep worker | grep -v grep"]
       interval: 30s
       timeout: 10s
       retries: 5
       start_period: 30s
+
+
+###########################################################################
+# MEDIA (Cloud)
+###########################################################################
+  jellyfin:
+    image: lscr.io/linuxserver/jellyfin:latest
+    container_name: jellyfin
+    restart: unless-stopped
+    user: ${PUID:?err}:${PGID:?err}
+    networks:
+      - external
+    environment:
+      - TZ=${TIMEZONE:?err}
+      - PUID=${PUID:?err}
+      - PGID=${PGID:?err}
+    volumes:
+      - ${FOLDER_FOR_DATA:?err}/jellyfin:/config
+      - ${FOLDER_FOR_MEDIA:?err}:/media
+    ports:
+      - ${WEBUI_PORT_JELLYFIN:-8096}:8096
+    labels:
+      - "tsdproxy.enable=true"
+      - "tsdproxy.name=jellyfin"
+      - "traefik.enable=true"
+      - "traefik.http.routers.jellyfin.rule=Host(`${JELLYFIN_DOMAIN}`)"
+      - "traefik.http.routers.jellyfin.entrypoints=websecure"
+      - "traefik.http.routers.jellyfin.tls.certresolver=letsencrypt"
+      - "traefik.http.services.jellyfin.loadbalancer.server.port=8096"
+
+  plex:
+    image: plexinc/pms-docker:latest
+    container_name: plex
+    restart: unless-stopped
+    networks:
+      - external
+    environment:
+      - TZ=${TIMEZONE:?err}
+      - PLEX_CLAIM=${PLEX_CLAIM:-}
+    volumes:
+      - ${FOLDER_FOR_DATA:?err}/plex:/config
+      - ${FOLDER_FOR_MEDIA:?err}:/media
+    ports:
+      - ${WEBUI_PORT_PLEX:-32400}:32400
+    labels:
+      - "tsdproxy.enable=true"
+      - "tsdproxy.name=plex"
+      - "traefik.enable=true"
+      - "traefik.http.routers.plex.rule=Host(`${PLEX_DOMAIN}`)"
+      - "traefik.http.routers.plex.entrypoints=websecure"
+      - "traefik.http.routers.plex.tls.certresolver=letsencrypt"
+      - "traefik.http.services.plex.loadbalancer.server.port=32400"
 
 
 ###########################################################################
@@ -145,7 +231,7 @@ services:
     environment:
       - TZ=${TIMEZONE:?err}
       - WATCHTOWER_CLEANUP=true
-      - WATCHTOWER_LABEL_ENABLE=true
+      - WATCHTOWER_LABEL_ENABLE=false
       - WATCHTOWER_POLL_INTERVAL=3600
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
