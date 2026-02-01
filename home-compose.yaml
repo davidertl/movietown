@@ -484,6 +484,104 @@ services:
       retries: 5
       start_period: 30s
 
+###########################################################################
+# FLARESOLVERR (Cloudflare CAPTCHA Bypass for Indexers)
+###########################################################################
+  flaresolverr:
+    image: ghcr.io/flaresolverr/flaresolverr:latest
+    container_name: flaresolverr
+    restart: unless-stopped
+    depends_on:
+      gluetun:
+        condition: service_healthy
+    environment:
+      - LOG_LEVEL=${LOG_LEVEL:-info}
+      - CAPTCHA_SOLVER=${CAPTCHA_SOLVER:-none}
+    network_mode: "service:gluetun"
+    labels:
+      - "tsdproxy.enable=true"
+      - "tsdproxy.name=flaresolverr"
+      - "tsdproxy.dash.label=utility"
+      - "tsdproxy.dash.label=movietown"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8191/api/v1"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 30s
+
+###########################################################################
+# TDARR (Video Transcoding & Automation)
+###########################################################################
+  tdarr:
+    image: ghcr.io/haveagitgat/tdarr:latest
+    container_name: tdarr
+    restart: unless-stopped
+    depends_on:
+      gluetun:
+        condition: service_healthy
+    volumes:
+      - ${FOLDER_FOR_DATA:?err}/tdarr/config:/app/data
+      - ${FOLDER_FOR_DATA:?err}/tdarr/logs:/app/logs
+      - ${FOLDER_FOR_MEDIA:?err}:/mnt/media
+      - /var/run/docker.sock:/var/run/docker.sock
+    environment:
+      - PUID=${PUID:?err}
+      - PGID=${PGID:?err}
+      - TZ=${TIMEZONE:?err}
+      - UMASK=${UMASK:?err}
+      - serverIP=0.0.0.0
+      - serverPort=8265
+      - webUIPort=8265
+      - internalNode=true
+      - nodeID=tdarr-node
+    network_mode: "service:gluetun"
+    labels:
+      - "tsdproxy.enable=true"
+      - "tsdproxy.name=tdarr"
+      - "tsdproxy.dash.label=transcoding"
+      - "tsdproxy.dash.label=movietown"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8265"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 60s
+
+###########################################################################
+# HOMARR (Dashboard & Service Management)
+###########################################################################
+  homarr:
+    image: ghcr.io/ajnart/homarr:latest
+    container_name: homarr
+    restart: unless-stopped
+    depends_on:
+      gluetun:
+        condition: service_healthy
+    ports:
+      - "${WEBUI_PORT_HOMARR:-7575}:7575"
+    volumes:
+      - ${FOLDER_FOR_DATA:?err}/homarr/config:/app/data/configs
+      - ${FOLDER_FOR_DATA:?err}/homarr/icons:/app/data/icons
+      - ${FOLDER_FOR_DATA:?err}/homarr/db:/app/data/db
+      - /var/run/docker.sock:/var/run/docker.sock
+    environment:
+      - PUID=${PUID:?err}
+      - PGID=${PGID:?err}
+      - TZ=${TIMEZONE:?err}
+    network_mode: "bridge"
+    labels:
+      - "tsdproxy.enable=true"
+      - "tsdproxy.name=homarr"
+      - "tsdproxy.dash.label=dashboard"
+      - "tsdproxy.dash.label=movietown"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:7575/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 30s
+
 
 volumes:
   #Authentik

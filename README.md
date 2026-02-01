@@ -56,6 +56,15 @@
   <a href="https://github.com/sabnzbd/sabnzbd">
     <img src="https://img.shields.io/badge/NZB-SABnzbd-ffa000" alt="SABnzbd">
   </a>
+  <a href="https://github.com/haveagitgat/tdarr">
+    <img src="https://img.shields.io/badge/Transcoding-Tdarr-3B82F6" alt="Tdarr">
+  </a>
+  <a href="https://github.com/flaresolverr/flaresolverr">
+    <img src="https://img.shields.io/badge/Utility-Flaresolverr-4F46E5" alt="Flaresolverr">
+  </a>
+  <a href="https://github.com/ajnart/homarr">
+    <img src="https://img.shields.io/badge/Dashboard-Homarr-F97316" alt="Homarr">
+  </a>
   <a href="https://github.com/jellyfin/jellyfin">
     <img src="https://img.shields.io/badge/Media-Jellyfin-00a4dc?logo=jellyfin&logoColor=white" alt="Jellyfin">
   </a>
@@ -65,10 +74,19 @@
 </p>
 
 
-Repository for my media stack, based on [mediastack.guide](https://mediastack.guide). It contains Docker Compose files for both cloud and home environments.
+**A mediastack.guide-inspired media stack** with a privacy-first split architecture. This repository contains Docker Compose files for both cloud and home environments, optimized for Tailscale-based networking and data sovereignty.
 
-## Why this stack
-I wanted to deploy mediastack but had privacy concerns. Cloudflared would have been my first choice, but streaming violates their TOS. I ended up using Tailscale instead.
+## Inspiration & Attribution
+
+This project is inspired by [**mediastack.guide**](https://mediastack.guide) by [@geekau](https://github.com/geekau/mediastack). We leverage their excellent research into *ARR automation, media server setup, and Docker best practices. Visit their [GitHub repository](https://github.com/geekau/mediastack) and [documentation](https://mediastack.guide) for the comprehensive single/multi-host reference implementation.
+
+## Why this variant
+
+While mediastack.guide is a fantastic all-in-one reference, I wanted a privacy-first approach:
+- **Data sovereignty**: All media and downloads stay on home hardware; only identity provider and public media servers in the cloud
+- **Tailscale-first**: Rather than exposing *ARR services via reverse proxy, they're private to the Tailnet by default
+- **Split topology**: Separates concerns (cloud: auth + media serving; home: automation + storage) for better flexibility
+- **Minimal exposure**: No need for public DNS/DDNS or reverse proxies for internal services
 
 ---
 ### Project summary
@@ -78,12 +96,24 @@ I wanted to deploy mediastack but had privacy concerns. Cloudflared would have b
 - Private-by-default: *ARR services are reachable over the Tailnet; Jellyfin/Plex are exposed from the cloud host.
 - Install guide: Deploy the cloud stack and complete Authentik setup → configure Tailscale and create an auth key → deploy both stacks using that key → integrate SSO as needed.
 
-### Differences to mediastack.guide
-- Topology: Split into two stacks (cloud + home) bridged by Tailscale, whereas mediastack.guide is primarily single-host oriented.
-- SSO: Authentik is included by default, so you can create a login for your family (please check your local laws ;-) )
-- Exposure model: Prefers Tailscale/tsdproxy and Gluetun tunneling over a public reverse proxy, reducing open ports.
-- Security stance: Tailnet-first with ACLs for fine-grained access control.
-- Compose structure: Minimal, split compose files with focused scope vs. a larger, opinionated monolithic stack.
+### How movietown differs from mediastack.guide
+
+| Aspect | movietown | mediastack.guide |
+|--------|-----------|------------------|
+| **Topology** | Split cloud + home via Tailscale | Single/multi-host; monolithic or separated |
+| **Public Access** | Minimal (media servers only) | Reverse proxy (Traefik) + Nginx optional |
+| **Internal Services** | Private via Tailnet ACLs | Internal/home network or reverse proxy |
+| **Data Storage** | Home-only (sovereignty) | Flexible; typically central |
+| **VPN Approach** | Full/mini/custom Gluetun config | Full/mini/no-download-vpn templates |
+| **Overlay Network** | Tailscale + tsdproxy (containerized) | Optional Headscale or native Tailscale |
+| **Authentication** | Authentik (mandatory) | Optional; Cloudflare, etc. |
+| **Tailscale Model** | Public Tailscale (simpler) | **Headscale option** (self-hosted) |
+| **Database** | PostgreSQL/Valkey for Authentik | Same, but optional |
+| **Scope** | Focused two-site architecture | Comprehensive reference |
+
+**When to use each:**
+- **movietown**: Privacy-conscious users, home lab, wanting Tailnet-first access, data stored at home
+- **mediastack.guide**: Public media server, family access via reverse proxy, single/multi-host flexibility, comprehensive guides
 
 ## :building_construction: Architecture
 
@@ -146,10 +176,15 @@ If you prefer manual setup, see the detailed [step-by-step installation guide](#
 
 ---
 
-## :information_source: Notes
+## :information_source: References & Resources
 
-- This repository contains **only** compose files; secrets and domain configurations are managed externally.
-- For questions or further planning, see [mediastack.guide](https://mediastack.guide).
+- **mediastack.guide**: [Documentation](https://mediastack.guide) | [GitHub](https://github.com/geekau/mediastack)
+  - Comprehensive guide for all-in-one media stack setup
+  - Detailed per-service configuration guides
+  - Network security models (full/mini/no-VPN)
+  - Original inspiration for this variant
+
+- This repository contains **compose files optimized for privacy-first two-site setup**; secrets and domain configurations are managed via `.env` files.
 
 ---
 
@@ -350,11 +385,123 @@ Recommended setup order:
 3. Add download clients (qBittorrent, SABnzbd) in the *ARR apps.
 4. Configure quality profiles, release profiles, and media paths.
 5. Optional: Enable subtitle automation with Bazarr.
+6. Optional: Set up **Homarr** dashboard for unified service management.
 
 Notes:
 
 - The *ARR apps are by default **not** publicly exposed in the home stack. Access is local or via Tailscale/VPN.
 - Authentik (SSO) integration can be added after basic setup.
+- **Tdarr** enables automatic video transcoding and optimization (CPU-intensive; optional).
+- **Flaresolverr** bypasses Cloudflare protection on torrent/usenet indexers; configured in Prowlarr settings.
+- **Homarr** provides a beautiful dashboard to manage and monitor all services from one UI.
+
+---
+
+## :lock: Security & Best Practices
+
+### Database Security (PostgreSQL)
+
+- **Default passwords**: Change `POSTGRESQL_PASSWORD` from `change-me-postgres` to a strong random value
+- **Access control**: PostgreSQL is only accessible from within the Tailnet; cloud-only (not exposed)
+- **Backups**: Regularly backup `/srv/movietown/data/postgres` directory (persistent volume)
+  ```bash
+  sudo docker exec postgres pg_dump -U authentik authentik > backup-$(date +%Y%m%d).sql
+  ```
+
+### VPN & Network Privacy
+
+- **Gluetun firewall**: All *ARR and download services route through Gluetun VPN
+  - If VPN connection drops, traffic stops (fail-safe)
+  - Verify VPN status: `docker exec gluetun /bin/sh -c "wget -qO- ifconfig.io"`
+- **Local subnet**: Ensure `LOCAL_SUBNET` in `.env` matches your home LAN (e.g., `192.168.0.0/16`)
+- **Kill switch**: Gluetun enforces outbound firewall rules; no leaks if VPN dies
+
+### Authentik & SSO Security
+
+- **Secret key**: Keep `AUTHENTIK_SECRET_KEY` unique and secure (32+ chars, random)
+- **Admin user**: Create a strong password during initial setup
+- **MFA**: Enable Multi-Factor Authentication for all Authentik users (TOTP recommended)
+- **Session timeout**: Configure session policies in Authentik to auto-logout after inactivity
+
+### Tailscale ACLs & Access Control
+
+- **Default deny**: Set ACLs to deny by default; explicitly allow access to services
+- **Tag devices**: Use tags (e.g., `tag:admin`, `tag:family`) for granular control
+- **Example restrictive policy**:
+  ```json
+  {
+    "ACLs": [
+      {
+        "Action": "accept",
+        "Users": ["group:admins"],
+        "Ports": ["tag:movietown-cloud:9443", "tag:movietown-home:8989"]
+      },
+      {
+        "Action": "accept",
+        "Users": ["group:family"],
+        "Ports": ["tag:movietown-cloud:8096"]  // Jellyfin only
+      }
+    ]
+  }
+  ```
+
+### Container Security
+
+- **Run as non-root**: All services run with `PUID/PGID` (1000:1000); never use root
+- **Read-only volumes**: Consider marking config volumes read-only after setup
+- **Update strategy**: Watchtower auto-updates images; disable with `WATCHTOWER_LABEL_ENABLE=true` if preferred
+
+### Backup & Disaster Recovery
+
+- **What to backup**:
+  - `/srv/movietown/data` (configs, databases, Authentik credentials)
+  - `/mnt/media` (media library)
+  - `.env` files (encrypted or secure storage)
+
+- **Recovery steps**:
+  1. Restore `/srv/movietown/data` on new host
+  2. Set `.env` values
+  3. Run `docker compose -f cloud-compose.yaml up -d`
+  4. Verify Authentik login works
+
+- **Automated backups**: Use `restic`, `duplicacy`, or NAS snapshots for incremental backups
+
+### Optional: CrowdSec Integration (Advanced)
+
+For production cloud deployments with public exposure, consider adding **CrowdSec** (DDoS/intrusion detection):
+
+- See [mediastack.guide CrowdSec guide](https://mediastack.guide/config/crowdsec-introduction/) for detailed setup
+- Integrates with Traefik bouncer plugin to block malicious IPs
+- Requires CrowdSec account enrollment
+
+### Monitoring (Optional)
+
+For operational visibility, consider adding:
+- **Prometheus + Grafana**: Metrics collection and visualization
+- **Loki**: Centralized log aggregation
+- **Portainer**: Docker container management UI
+
+Reference: [mediastack.guide monitoring options](https://mediastack.guide)
+
+---
+
+
+## :globe_with_meridians: Networking: Tailscale vs. Headscale (Self-Hosted)
+
+movietown uses **public Tailscale** by default for simplicity. However, for self-hosted alternatives:
+
+### Tailscale (Default)
+- ✅ **Pros**: Zero setup, OIDC support, official app updates, mobile clients, relay infrastructure
+- ❌ **Cons**: Depends on Tailscale infrastructure, account required, privacy concerns for some
+- **Setup**: Get an auth key from [tailscale.com](https://tailscale.com), set `TAILSCALE_AUTH_KEY` in `.env`
+
+### Headscale (Self-Hosted Alternative)
+- ✅ **Pros**: Full control, no external service dependency, privacy-focused, air-gapped capable
+- ❌ **Cons**: More complex setup, maintenance required, fewer features than Tailscale
+- **Reference**: See [Headscale documentation](https://headscale.net/) and [mediastack.guide Headscale section](https://mediastack.guide/config/headscale-configuration/)
+- **Integration**: Would replace `tsdproxy` service config to point to self-hosted Headscale server
+
+**Recommendation**: Start with public Tailscale for ease; migrate to Headscale if you have operational capacity or strict privacy requirements.
 
 ---
 
