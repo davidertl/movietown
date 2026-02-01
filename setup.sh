@@ -1,6 +1,11 @@
 #!/bin/bash
 set -e
 
+# Ensure we are running with bash even if invoked via sh
+if [ -z "$BASH_VERSION" ]; then
+    exec bash "$0" "$@"
+fi
+
 # Colors for output
 RED='\033[0;31m'
 GREEN='\033[0;32m'
@@ -489,9 +494,14 @@ main() {
         fi
     fi
     
-    # Check Docker Compose
-    if ! docker compose version &> /dev/null; then
-        echo -e "${RED}Docker Compose plugin not found${NC}"
+    # Check Docker Compose plugin or standalone binary
+    if docker compose version &> /dev/null; then
+        :
+    elif docker-compose version &> /dev/null; then
+        echo -e "${YELLOW}Using docker-compose standalone binary${NC}"
+        alias docker="docker-compose"
+    else
+        echo -e "${RED}Docker Compose not found${NC}"
         exit 1
     fi
     
