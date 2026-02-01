@@ -102,13 +102,13 @@ services:
       - TZ=${TIMEZONE:?err}
       - AUTHENTIK_LOG_LEVEL=info
       - AUTHENTIK_SECRET_KEY=${AUTHENTIK_SECRET_KEY:?err}
-      - AUTHENTIK_REDIS__HOST=valkey
-      - AUTHENTIK_POSTGRESQL__HOST=postgresql
-      - AUTHENTIK_POSTGRESQL__NAME=${AUTHENTIK_DATABASE:-authentik}
-      - AUTHENTIK_POSTGRESQL__USER=${POSTGRESQL_USERNAME:-authentik}
-      - AUTHENTIK_POSTGRESQL__PASSWORD=${POSTGRESQL_PASSWORD:?Postgres password is required}
-      - AUTHENTIK_ERROR_REPORTING__ENABLED=${AUTHENTIK_ERROR_REPORTING__ENABLED:-false}
-      - AUTHENTIK_STORAGE__MEDIA_ROOT=/data/media
+      - AUTHENTIK_REDIS_HOST=valkey
+      - AUTHENTIK_POSTGRESQL_HOST=postgresql
+      - AUTHENTIK_POSTGRESQL_NAME=${AUTHENTIK_DATABASE:-authentik}
+      - AUTHENTIK_POSTGRESQL_USER=${POSTGRESQL_USERNAME:-authentik}
+      - AUTHENTIK_POSTGRESQL_PASSWORD=${POSTGRESQL_PASSWORD:?Postgres password is required}
+      - AUTHENTIK_ERROR_REPORTING_ENABLED=${AUTHENTIK_ERROR_REPORTING_ENABLED:-false}
+      - AUTHENTIK_STORAGE_MEDIA_ROOT=/data/media
     volumes:
       - ${FOLDER_FOR_DATA:?err}/authentik/media:/data/media
       - ${FOLDER_FOR_DATA:?err}/authentik/templates:/templates
@@ -141,13 +141,13 @@ services:
     environment:
       - TZ=${TIMEZONE:?err}
       - AUTHENTIK_SECRET_KEY=${AUTHENTIK_SECRET_KEY:?err}
-      - AUTHENTIK_REDIS__HOST=valkey
-      - AUTHENTIK_POSTGRESQL__HOST=postgresql
-      - AUTHENTIK_POSTGRESQL__NAME=${AUTHENTIK_DATABASE:?err}
-      - AUTHENTIK_POSTGRESQL__USER=${POSTGRESQL_USERNAME:?err}
-      - AUTHENTIK_POSTGRESQL__PASSWORD=${POSTGRESQL_PASSWORD:?err}
-      - AUTHENTIK_ERROR_REPORTING__ENABLED=${AUTHENTIK_ERROR_REPORTING__ENABLED:-false}
-      - AUTHENTIK_STORAGE__MEDIA_ROOT=/data/media
+      - AUTHENTIK_REDIS_HOST=valkey
+      - AUTHENTIK_POSTGRESQL_HOST=postgresql
+      - AUTHENTIK_POSTGRESQL_NAME=${AUTHENTIK_DATABASE:?err}
+      - AUTHENTIK_POSTGRESQL_USER=${POSTGRESQL_USERNAME:?err}
+      - AUTHENTIK_POSTGRESQL_PASSWORD=${POSTGRESQL_PASSWORD:?err}
+      - AUTHENTIK_ERROR_REPORTING_ENABLED=${AUTHENTIK_ERROR_REPORTING_ENABLED:-false}
+      - AUTHENTIK_STORAGE_MEDIA_ROOT=/data/media
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
       - ${FOLDER_FOR_DATA:?err}/certs:/certs
@@ -170,7 +170,7 @@ services:
 # MEDIA (Cloud)
 ###########################################################################
   jellyfin:
-    image: lscr.io/linuxserver/jellyfin:stable
+    image: lscr.io/linuxserver/jellyfin:latest
     container_name: jellyfin
     restart: unless-stopped
     user: ${PUID:?err}:${PGID:?err}

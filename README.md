@@ -324,8 +324,8 @@ TP_THEME=organizr-dark
 # Authentik worker settings (Authentik runs in the cloud)
 AUTHENTIK_VERSION=latest
 AUTHENTIK_SECRET_KEY=change-me-very-secret
-AUTHENTIK_REDIS__HOST=authentik-redis.your-tailnet.ts.net
-AUTHENTIK_POSTGRESQL__HOST=authentik-db.your-tailnet.ts.net
+AUTHENTIK_REDIS_HOST=authentik-redis.your-tailnet.ts.net
+AUTHENTIK_POSTGRESQL_HOST=authentik-db.your-tailnet.ts.net
 AUTHENTIK_DATABASE=authentik
 POSTGRESQL_USERNAME=authentik
 POSTGRESQL_PASSWORD=change-me-postgres
@@ -550,7 +550,7 @@ Benefits:
   - Ensure subnets/gateways do not overlap with your LAN/VPN ranges
   - Gluetun enforces a VPN egress for *ARR services
   
-- **Authentik worker** (home): Set `AUTHENTIK_REDIS__HOST` and `AUTHENTIK_POSTGRESQL__HOST` to the cloud host or tsdproxy names
+- **Authentik worker** (home): Set `AUTHENTIK_REDIS_HOST` and `AUTHENTIK_POSTGRESQL_HOST` to the cloud host or tsdproxy names
 
 - **Tailscale/tsdproxy**:
   - If using host-based Tailscale on cloud, disable/remove tsdproxy from cloud-compose.yaml
