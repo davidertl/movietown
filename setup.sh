@@ -204,17 +204,29 @@ create_env_file() {
         
         echo ""
         echo -e "${YELLOW}Traefik / Domain Configuration (for HTTPS):${NC}"
-        read -p "Authentik domain (e.g., auth.yourdomain.com): " AUTH_DOMAIN
-        read -p "Jellyfin domain (e.g., jellyfin.yourdomain.com): " JELLYFIN_DOMAIN
-        read -p "Plex domain (e.g., plex.yourdomain.com): " PLEX_DOMAIN
-        read -p "Email for Let's Encrypt [admin@example.com]: " LETSENCRYPT_EMAIL
-        LETSENCRYPT_EMAIL=${LETSENCRYPT_EMAIL:-admin@example.com}
+        read -p "Main domain for your stack (e.g., yourdomain.com, leave empty to skip): " MAIN_DOMAIN
         
-        echo ""
-        echo -e "${YELLOW}Let's Encrypt Configuration:${NC}"
-        echo "Use 'false' for development, 'true' for production"
-        read -p "Enable Let's Encrypt ACME [false]: " ACME_ENABLED
-        ACME_ENABLED=${ACME_ENABLED:-false}
+        if [ ! -z "$MAIN_DOMAIN" ]; then
+            read -p "Authentik subdomain [auth]: " AUTH_SUBDOMAIN
+            AUTH_SUBDOMAIN=${AUTH_SUBDOMAIN:-auth}
+            
+            read -p "Jellyfin subdomain [jellyfin]: " JELLYFIN_SUBDOMAIN
+            JELLYFIN_SUBDOMAIN=${JELLYFIN_SUBDOMAIN:-jellyfin}
+            
+            read -p "Plex subdomain [plex]: " PLEX_SUBDOMAIN
+            PLEX_SUBDOMAIN=${PLEX_SUBDOMAIN:-plex}
+            
+            read -p "Email for Let's Encrypt [admin@example.com]: " LETSENCRYPT_EMAIL
+            LETSENCRYPT_EMAIL=${LETSENCRYPT_EMAIL:-admin@example.com}
+            
+            read -p "Enable Let's Encrypt ACME [false]: " ACME_ENABLED
+            ACME_ENABLED=${ACME_ENABLED:-false}
+            
+            # Construct full domains
+            AUTH_DOMAIN="${AUTH_SUBDOMAIN}.${MAIN_DOMAIN}"
+            JELLYFIN_DOMAIN="${JELLYFIN_SUBDOMAIN}.${MAIN_DOMAIN}"
+            PLEX_DOMAIN="${PLEX_SUBDOMAIN}.${MAIN_DOMAIN}"
+        fi
     else
         read -p "Media directory (NFS mount recommended) [/mnt/media]: " MEDIA_DIR
         MEDIA_DIR=${MEDIA_DIR:-/mnt/media}
@@ -253,11 +265,6 @@ create_env_file() {
     read -p "Tailscale auth key (required for tsdproxy): " TAILSCALE_KEY
     
     # Apply values to .env
-        sed -i "s|AUTHENTIK_DOMAIN=.*|AUTHENTIK_DOMAIN=${AUTH_DOMAIN}|g" "$ENV_FILE"
-        sed -i "s|JELLYFIN_DOMAIN=.*|JELLYFIN_DOMAIN=${JELLYFIN_DOMAIN}|g" "$ENV_FILE"
-        sed -i "s|PLEX_DOMAIN=.*|PLEX_DOMAIN=${PLEX_DOMAIN}|g" "$ENV_FILE"
-        sed -i "s|LETSENCRYPT_EMAIL=.*|LETSENCRYPT_EMAIL=${LETSENCRYPT_EMAIL}|g" "$ENV_FILE"
-        sed -i "s|TRAEFIK_ACME_ENABLED=.*|TRAEFIK_ACME_ENABLED=${ACME_ENABLED}|g" "$ENV_FILE"
     echo "Writing configuration..."
     
     sed -i "s|TIMEZONE=.*|TIMEZONE=${TIMEZONE}|g" "$ENV_FILE"
@@ -271,6 +278,17 @@ create_env_file() {
     
     if [ "$DEPLOY_MODE" = "cloud" ]; then
         sed -i "s|CLOUD_EXTERNAL_SUBNET=.*|CLOUD_EXTERNAL_SUBNET=${CLOUD_SUBNET}|g" "$ENV_FILE"
+        sed -i "s|CLOUD_EXTERNAL_GATEWAY=.*|CLOUD_EXTERNAL_GATEWAY=${CLOUD_GATEWAY}|g" "$ENV_FILE"
+        
+        # Add domain configuration if provided
+        if [ ! -z "$MAIN_DOMAIN" ]; then
+            sed -i "s|# DOMAIN=.*|DOMAIN=${MAIN_DOMAIN}|g" "$ENV_FILE"
+            sed -i "s|# AUTHENTIK_SUBDOMAIN=.*|AUTHENTIK_SUBDOMAIN=${AUTH_SUBDOMAIN}|g" "$ENV_FILE"
+            sed -i "s|# JELLYFIN_SUBDOMAIN=.*|JELLYFIN_SUBDOMAIN=${JELLYFIN_SUBDOMAIN}|g" "$ENV_FILE"
+            sed -i "s|# PLEX_SUBDOMAIN=.*|PLEX_SUBDOMAIN=${PLEX_SUBDOMAIN}|g" "$ENV_FILE"
+            sed -i "s|# LETSENCRYPT_EMAIL=.*|LETSENCRYPT_EMAIL=${LETSENCRYPT_EMAIL}|g" "$ENV_FILE"
+            sed -i "s|# TRAEFIK_ACME_ENABLED=.*|TRAEFIK_ACME_ENABLED=${ACME_ENABLED}|g" "$ENV_FILE"
+        fi
         sed -i "s|CLOUD_EXTERNAL_GATEWAY=.*|CLOUD_EXTERNAL_GATEWAY=${CLOUD_GATEWAY}|g" "$ENV_FILE"
     else
         sed -i "s|DOCKER_SUBNET=.*|DOCKER_SUBNET=${DOCKER_SUBNET}|g" "$ENV_FILE"

@@ -538,3 +538,106 @@ Benefits:
 - Access only for defined groups/tags
 - Additional protection alongside Authentik and any reverse proxy
 - Simple management across multiple sites/networks
+
+---
+
+## :gear: Configuration Notes
+
+- **Environment files**: Use `cloud.env.example` and `home.env.example` as templates, then copy to `.env` on each host
+  - Validate your env before running: `docker compose -f <file> --env-file .env config`
+  
+- **Networking**:
+  - Ensure subnets/gateways do not overlap with your LAN/VPN ranges
+  - Gluetun enforces a VPN egress for *ARR services
+  
+- **Authentik worker** (home): Set `AUTHENTIK_REDIS__HOST` and `AUTHENTIK_POSTGRESQL__HOST` to the cloud host or tsdproxy names
+
+- **Tailscale/tsdproxy**:
+  - If using host-based Tailscale on cloud, disable/remove tsdproxy from cloud-compose.yaml
+  - If keeping tsdproxy, `TAILSCALE_AUTH_KEY` is required
+
+---
+
+## 📋 What's Included
+
+**Docker Compose Files:**
+- `cloud-compose.yaml` - Authentik, PostgreSQL, Valkey, Jellyfin, Plex, Watchtower, tsdproxy
+- `home-compose.yaml` - Gluetun, *ARR apps, download clients, Tdarr, Flaresolverr, Homarr, Authentik worker
+
+**Setup & Configuration:**
+- `setup.sh` - Automated installation script for fresh Debian/Ubuntu servers
+- `cloud.env.example` - Cloud stack environment template
+- `home.env.example` - Home stack environment template
+- `.gitignore` - Prevents committing sensitive `.env` files
+
+**Configuration Files:**
+- `traefik.yaml` - Reverse proxy configuration (optional; for cloud public access)
+- `traefik-config.yaml` - Dynamic routing template (optional)
+
+---
+
+## 🚀 Services Included
+
+**Cloud Stack:**
+- Authentik (IdP/SSO) + worker + PostgreSQL + Valkey
+- Jellyfin (media server)
+- Plex (media server, optional)
+- Traefik (reverse proxy, optional)
+- Watchtower (auto-updates)
+- tsdproxy (containerized Tailscale)
+
+**Home Stack:**
+- Gluetun (VPN client with kill switch)
+- Sonarr, Radarr, Readarr, Lidarr, Prowlarr, Bazarr (*ARR automation)
+- qBittorrent (torrent client)
+- SABnzbd (usenet client)
+- Jellyseerr (media request interface)
+- Filebot (media file automation)
+- Mylar (comic automation)
+- Tdarr (video transcoding)
+- Flaresolverr (Cloudflare bypass)
+- Homarr (service dashboard)
+- Authentik worker (connects to cloud)
+- Watchtower (auto-updates, optional)
+
+---
+
+## 🔧 Troubleshooting
+
+- **Check logs**: 
+  ```bash
+  docker compose -f cloud-compose.yaml logs -f
+  docker compose -f home-compose.yaml logs -f
+  ```
+
+- **Validate configuration**:
+  ```bash
+  docker compose -f <file> --env-file .env config
+  ```
+
+- **Common issues**:
+  - Overlapping CIDRs between Docker subnets, LAN, and VPN
+  - Missing `TAILSCALE_AUTH_KEY` when tsdproxy is enabled
+  - Incorrect file permissions (check `PUID`/`PGID`/`UMASK`)
+  - PostgreSQL volume mount path (must be `/var/lib/postgresql` not `/var/lib/postgresql/data`)
+
+---
+
+## 📖 Further Reading
+
+- [mediastack.guide documentation](https://mediastack.guide) - Comprehensive reference guide
+- [Authentik docs](https://docs.goauthentik.io/) - Identity provider setup
+- [Tailscale docs](https://tailscale.com/kb/) - VPN & networking
+- [Gluetun docs](https://github.com/qdm12/gluetun/wiki) - VPN client configuration
+- [*ARR project wikis](https://wiki.servarr.com/) - Media automation setup
+
+---
+
+## 📝 License
+
+This project is provided as-is for personal use. Refer to individual project licenses for component-specific terms.
+
+## 🙏 Credits
+
+- Based on concepts and best practices from [mediastack.guide](https://mediastack.guide) by [@geekau](https://github.com/geekau)
+- Built with: Authentik, *ARR suite, Gluetun, Jellyfin, Plex, Tailscale, Traefik, Watchtower, and many other fantastic open-source projects
