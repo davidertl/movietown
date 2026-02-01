@@ -114,7 +114,7 @@ I wanted to deploy mediastack but had privacy concerns. Cloudflared would have b
 Use the automated setup script for easy deployment on fresh Debian/Ubuntu servers:
 
 ```bash
-# Clone this repository
+# Clone this repository (replace 'yourusername' with your GitHub username)
 git clone https://github.com/yourusername/movietown.git
 cd movietown
 
@@ -126,6 +126,7 @@ chmod +x setup.sh
 ```
 
 The script will:
+- Install Git if needed
 - Install Docker and Docker Compose if needed
 - Detect and guide you through cloud or home deployment
 - Create and configure your `.env` file with generated secrets

@@ -35,6 +35,38 @@ check_docker() {
     fi
 }
 
+# Function to check if Git is installed
+check_git() {
+    if command -v git &> /dev/null; then
+        echo -e "${GREEN}✓ Git is already installed${NC}"
+        git --version
+        return 0
+    else
+        echo -e "${YELLOW}✗ Git is not installed${NC}"
+        return 1
+    fi
+}
+
+# Function to install Git
+install_git() {
+    echo -e "${BLUE}Installing Git...${NC}"
+    sudo apt-get update
+    sudo apt-get install -y git
+    echo -e "${GREEN}✓ Git installed successfully${NC}"
+}
+
+# Function to check if Docker is installed
+check_docker() {
+    if command -v docker &> /dev/null; then
+        echo -e "${GREEN}✓ Docker is already installed${NC}"
+        docker --version
+        return 0
+    else
+        echo -e "${YELLOW}✗ Docker is not installed${NC}"
+        return 1
+    fi
+}
+
 # Function to install Docker
 install_docker() {
     echo -e "${BLUE}Installing Docker...${NC}"
@@ -334,7 +366,12 @@ show_next_steps() {
         echo "   https://<your-domain-for-jellyfin>"
         echo "   https://<your-domain-for-plex>"
         echo ""
-        echo "8. Complete Authentik setup, then configure Tailscale"
+        echo "8. Complete Authentik initial setup:"
+        echo "   Navigate to: http://<your-server-ip>:9000/if/flow/initial-setup/"
+        echo "   IMPORTANT: Include the trailing forward slash at the end of the URL"
+        echo "   The URL must be exactly: http://<your-server-ip>:9000/if/flow/initial-setup/"
+        echo ""
+        echo "9. Configure Tailscale and connect home server"
     else
         echo -e "${BLUE}Next steps for HOME deployment:${NC}"
         echo "1. Ensure cloud stack is running first"
@@ -368,6 +405,17 @@ show_next_steps() {
 main() {
     echo "Starting setup process..."
     echo ""
+    
+    # Check/Install Git
+    if ! check_git; then
+        read -p "Install Git now? [Y/n]: " INSTALL_GIT
+        if [[ ! $INSTALL_GIT =~ ^[Nn]$ ]]; then
+            install_git
+        else
+            echo -e "${RED}Git is required. Exiting.${NC}"
+            exit 1
+        fi
+    fi
     
     # Check/Install Docker
     if ! check_docker; then
