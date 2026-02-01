@@ -108,8 +108,9 @@ services:
       - AUTHENTIK_POSTGRESQL__USER=${POSTGRESQL_USERNAME:-authentik}
       - AUTHENTIK_POSTGRESQL__PASSWORD=${POSTGRESQL_PASSWORD:?Postgres password is required}
       - AUTHENTIK_ERROR_REPORTING__ENABLED=${AUTHENTIK_ERROR_REPORTING__ENABLED:-false}
+      - AUTHENTIK_STORAGE__MEDIA_ROOT=/data/media
     volumes:
-      - ${FOLDER_FOR_DATA:?err}/authentik/media:/media
+      - ${FOLDER_FOR_DATA:?err}/authentik/media:/data/media
       - ${FOLDER_FOR_DATA:?err}/authentik/templates:/templates
     ports:
       - ${WEBUI_PORT_AUTHENTIK:-9000}:9000
@@ -146,10 +147,11 @@ services:
       - AUTHENTIK_POSTGRESQL__USER=${POSTGRESQL_USERNAME:?err}
       - AUTHENTIK_POSTGRESQL__PASSWORD=${POSTGRESQL_PASSWORD:?err}
       - AUTHENTIK_ERROR_REPORTING__ENABLED=${AUTHENTIK_ERROR_REPORTING__ENABLED:-false}
+      - AUTHENTIK_STORAGE__MEDIA_ROOT=/data/media
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
       - ${FOLDER_FOR_DATA:?err}/certs:/certs
-      - ${FOLDER_FOR_DATA:?err}/authentik/media:/media
+      - ${FOLDER_FOR_DATA:?err}/authentik/media:/data/media
       - ${FOLDER_FOR_DATA:?err}/authentik/templates:/templates
     depends_on:
       postgresql:
@@ -168,7 +170,7 @@ services:
 # MEDIA (Cloud)
 ###########################################################################
   jellyfin:
-    image: lscr.io/linuxserver/jellyfin:latest
+    image: lscr.io/linuxserver/jellyfin:stable
     container_name: jellyfin
     restart: unless-stopped
     user: ${PUID:?err}:${PGID:?err}
@@ -193,7 +195,7 @@ services:
       - "traefik.http.services.jellyfin.loadbalancer.server.port=8096"
 
   plex:
-    image: plexinc/pms-docker:latest
+    image: plexinc/pms-docker:public
     container_name: plex
     restart: unless-stopped
     networks:
@@ -254,7 +256,7 @@ services:
     environment:
       - TS_AUTHKEY=${TAILSCALE_AUTH_KEY:?TAILSCALE_AUTH_KEY missing}
     ports:
-      - "80:8080"
+      - "8090:8080"
 
 
 volumes:

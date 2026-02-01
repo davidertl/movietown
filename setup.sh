@@ -8,6 +8,29 @@ YELLOW='\033[1;33m'
 BLUE='\033[0;34m'
 NC='\033[0m' # No Color
 
+SETUP_USER="movietown"
+
+ensure_setup_user() {
+    local USERNAME="$SETUP_USER"
+
+    if ! id -u "$USERNAME" >/dev/null 2>&1; then
+        useradd -m -s /bin/bash "$USERNAME"
+    fi
+
+    usermod -aG sudo "$USERNAME"
+
+    if ! getent group docker >/dev/null 2>&1; then
+        groupadd -f docker
+    fi
+
+    usermod -aG docker "$USERNAME"
+
+    if [ ! -f "/etc/sudoers.d/${USERNAME}" ]; then
+        echo "${USERNAME} ALL=(ALL) NOPASSWD:ALL" > "/etc/sudoers.d/${USERNAME}"
+        chmod 440 "/etc/sudoers.d/${USERNAME}"
+    fi
+}
+
 # Script configuration
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
@@ -19,8 +42,22 @@ echo ""
 
 # Check if running as root
 if [[ $EUID -eq 0 ]]; then
-   echo -e "${RED}This script should not be run as root. Run as a regular user with sudo privileges.${NC}"
-   exit 1
+   ensure_setup_user
+
+   if [ "$(stat -c '%U' "$SCRIPT_DIR")" != "$SETUP_USER" ]; then
+       chown -R "$SETUP_USER":"$SETUP_USER" "$SCRIPT_DIR"
+   fi
+
+   SCRIPT_PATH="${SCRIPT_DIR}/$(basename "$0")"
+   COMMAND="$SCRIPT_PATH"
+   if [ "$#" -gt 0 ]; then
+       for ARG in "$@"; do
+           COMMAND+=" $(printf '%q' "$ARG")"
+       done
+   fi
+
+   echo -e "${BLUE}Switching to ${SETUP_USER} for setup...${NC}"
+   exec su - "$SETUP_USER" -c "$COMMAND"
 fi
 
 # Function to check if Docker is installed
@@ -139,12 +176,12 @@ select_deployment_type() {
         1)
             DEPLOY_MODE="cloud"
             COMPOSE_FILE="cloud-compose.yaml"
-            ENV_EXAMPLE="cloud.example.env"
+            ENV_EXAMPLE="cloud.env.example"
             ;;
         2)
             DEPLOY_MODE="home"
             COMPOSE_FILE="home-compose.yaml"
-            ENV_EXAMPLE="home.example.env"
+            ENV_EXAMPLE="home.env.example"
             ;;
         *)
             echo -e "${RED}Invalid choice${NC}"
@@ -288,6 +325,11 @@ create_env_file() {
             sed -i "s|# PLEX_SUBDOMAIN=.*|PLEX_SUBDOMAIN=${PLEX_SUBDOMAIN}|g" "$ENV_FILE"
             sed -i "s|# LETSENCRYPT_EMAIL=.*|LETSENCRYPT_EMAIL=${LETSENCRYPT_EMAIL}|g" "$ENV_FILE"
             sed -i "s|# TRAEFIK_ACME_ENABLED=.*|TRAEFIK_ACME_ENABLED=${ACME_ENABLED}|g" "$ENV_FILE"
+            
+            # Write full domain variables
+            echo "AUTHENTIK_DOMAIN=${AUTH_DOMAIN}" >> "$ENV_FILE"
+            echo "JELLYFIN_DOMAIN=${JELLYFIN_DOMAIN}" >> "$ENV_FILE"
+            echo "PLEX_DOMAIN=${PLEX_DOMAIN}" >> "$ENV_FILE"
         fi
         sed -i "s|CLOUD_EXTERNAL_GATEWAY=.*|CLOUD_EXTERNAL_GATEWAY=${CLOUD_GATEWAY}|g" "$ENV_FILE"
     else
@@ -324,6 +366,7 @@ create_directories() {
     
     if [ "$DEPLOY_MODE" = "cloud" ]; then
         sudo mkdir -p "${DATA_DIR}"/{postgresql,valkey,authentik,jellyfin,plex,traefik,tsdproxy_hetzner,certs}
+        sudo mkdir -p "${DATA_DIR}/authentik/media" "${DATA_DIR}/authentik/templates"
     else
         sudo mkdir -p "${DATA_DIR}"/{gluetun,authentik,bazarr,jellyseerr,filebot,lidarr,mylar,prowlarr,radarr,readarr,sabnzbd,sonarr,qbittorrent,tsdproxy_arr,certs}
     fi

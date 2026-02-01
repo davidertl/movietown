@@ -7,9 +7,9 @@ entryPoints:
     address: ":80"
     http:
       redirections:
-        entrypoint:
-          regex: "^http://(.*)$"
-          replacement: "https://$1"
+        entryPoint:
+          to: websecure
+          scheme: https
           permanent: true
   websecure:
     address: ":443"
@@ -35,6 +35,4 @@ certificatesResolvers:
         entryPoint: web
 
 # Ping for healthcheck
-ping:
-  entryPoint: "web"
-  dashboard: false
+ping: {}
