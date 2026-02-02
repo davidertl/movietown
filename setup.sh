@@ -65,18 +65,6 @@ if [[ $EUID -eq 0 ]]; then
    exec su - "$SETUP_USER" -c "$COMMAND"
 fi
 
-# Function to check if Docker is installed
-check_docker() {
-    if command -v docker &> /dev/null; then
-        echo -e "${GREEN}✓ Docker is already installed${NC}"
-        docker --version
-        return 0
-    else
-        echo -e "${YELLOW}✗ Docker is not installed${NC}"
-        return 1
-    fi
-}
-
 # Function to check if Git is installed
 check_git() {
     if command -v git &> /dev/null; then
@@ -157,7 +145,7 @@ install_docker() {
     
     # Add current user to docker group
     echo "Adding user to docker group..."
-    sudo usermod -aG docker $USER
+    sudo usermod -aG docker "$USER"
     
     echo -e "${GREEN}✓ Docker installed successfully${NC}"
     echo -e "${YELLOW}Note: You may need to log out and back in for group changes to take effect${NC}"
@@ -248,7 +236,7 @@ create_env_file() {
         echo -e "${YELLOW}Traefik / Domain Configuration (for HTTPS):${NC}"
         read -p "Main domain for your stack (e.g., yourdomain.com, leave empty to skip): " MAIN_DOMAIN
         
-        if [ ! -z "$MAIN_DOMAIN" ]; then
+        if [ -n "$MAIN_DOMAIN" ]; then
             read -p "Authentik subdomain [auth]: " AUTH_SUBDOMAIN
             AUTH_SUBDOMAIN=${AUTH_SUBDOMAIN:-auth}
             
@@ -323,7 +311,7 @@ create_env_file() {
         sed -i "s|CLOUD_EXTERNAL_GATEWAY=.*|CLOUD_EXTERNAL_GATEWAY=${CLOUD_GATEWAY}|g" "$ENV_FILE"
         
         # Add domain configuration if provided
-        if [ ! -z "$MAIN_DOMAIN" ]; then
+        if [ -n "$MAIN_DOMAIN" ]; then
             sed -i "s|# DOMAIN=.*|DOMAIN=${MAIN_DOMAIN}|g" "$ENV_FILE"
             sed -i "s|# AUTHENTIK_SUBDOMAIN=.*|AUTHENTIK_SUBDOMAIN=${AUTH_SUBDOMAIN}|g" "$ENV_FILE"
             sed -i "s|# JELLYFIN_SUBDOMAIN=.*|JELLYFIN_SUBDOMAIN=${JELLYFIN_SUBDOMAIN}|g" "$ENV_FILE"
@@ -336,7 +324,6 @@ create_env_file() {
             echo "JELLYFIN_DOMAIN=${JELLYFIN_DOMAIN}" >> "$ENV_FILE"
             echo "PLEX_DOMAIN=${PLEX_DOMAIN}" >> "$ENV_FILE"
         fi
-        sed -i "s|CLOUD_EXTERNAL_GATEWAY=.*|CLOUD_EXTERNAL_GATEWAY=${CLOUD_GATEWAY}|g" "$ENV_FILE"
     else
         sed -i "s|DOCKER_SUBNET=.*|DOCKER_SUBNET=${DOCKER_SUBNET}|g" "$ENV_FILE"
         sed -i "s|DOCKER_GATEWAY=.*|DOCKER_GATEWAY=${DOCKER_GATEWAY}|g" "$ENV_FILE"
@@ -385,12 +372,12 @@ validate_config() {
     echo -e "${BLUE}Validating Docker Compose configuration...${NC}"
     
     cd "$SCRIPT_DIR"
-    if docker compose -f "$COMPOSE_FILE" --env-file .env config > /dev/null 2>&1; then
+    if "${DOCKER_COMPOSE[@]}" -f "$COMPOSE_FILE" --env-file .env config > /dev/null 2>&1; then
         echo -e "${GREEN}✓ Configuration is valid${NC}"
         return 0
     else
         echo -e "${RED}✗ Configuration validation failed${NC}"
-        echo "Run: docker compose -f $COMPOSE_FILE --env-file .env config"
+        echo "Run: ${DOCKER_COMPOSE[*]} -f $COMPOSE_FILE --env-file .env config"
         return 1
     fi
 }
@@ -496,10 +483,10 @@ main() {
     
     # Check Docker Compose plugin or standalone binary
     if docker compose version &> /dev/null; then
-        :
+        DOCKER_COMPOSE=(docker compose)
     elif docker-compose version &> /dev/null; then
         echo -e "${YELLOW}Using docker-compose standalone binary${NC}"
-        alias docker="docker-compose"
+        DOCKER_COMPOSE=(docker-compose)
     else
         echo -e "${RED}Docker Compose not found${NC}"
         exit 1
@@ -524,10 +511,10 @@ main() {
     read -p "Start the stack now? [y/N]: " START_NOW
     if [[ $START_NOW =~ ^[Yy]$ ]]; then
         cd "$SCRIPT_DIR"
-        docker compose -f "$COMPOSE_FILE" up -d
+        "${DOCKER_COMPOSE[@]}" -f "$COMPOSE_FILE" up -d
         echo ""
         echo -e "${GREEN}Stack started successfully!${NC}"
-        docker compose -f "$COMPOSE_FILE" ps
+        "${DOCKER_COMPOSE[@]}" -f "$COMPOSE_FILE" ps
     fi
 }
 
