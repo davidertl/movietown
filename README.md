@@ -249,6 +249,7 @@ AUTHENTIK_SECRET_KEY=change-me-very-secret
 AUTHENTIK_DATABASE=authentik
 POSTGRESQL_USERNAME=authentik
 POSTGRESQL_PASSWORD=change-me-postgres
+AUTHENTIK_STORAGE__MEDIA_ROOT=/data/media
 VALKEY_PORT=6379
 
 # Ports (cloud)
